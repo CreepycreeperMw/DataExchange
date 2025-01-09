@@ -1,6 +1,6 @@
 import { config } from "./config";
 import { DataTypes } from "./DataTypes";
-import { TextCoder } from "./TextEncoding"
+import { TextCoder } from "./Transcoder"
 
 const encoder = TextCoder // Named differently to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
 const decoder = TextCoder // but so that you could technically switch to them down the road

@@ -18,7 +18,12 @@ export class TextCoder {
         }
         return res;
     }
-    unsafeEncode(text) {
+    /**
+     * Uses unsafe unicode characters so it cannot be used for data transmission
+     * @param {string} text
+     * @returns 
+     */
+    unicodeEncode(text) {
         let bytes = [];
         for (let i = 0; i < text.length; i++) {
             let codePoint = text.charCodeAt(i);
@@ -62,13 +67,18 @@ export class TextCoder {
         let res = "";
         // bytes.forEach(byte=>res+=charset.charAt(byte));
 
-        const endD = end ?? bytes.length
+        const endD = end ?? bytes.byteLength;
         for (let i = 0; i < endD; i++) {
             res += charset.charAt(bytes[i])
         }
         return res;
     }
-    unsafeDecode(bytes) {
+    /**
+     * Uses unsafe unicode characters so it cannot be used for data transmission
+     * @param {Uint8Array} bytes 
+     * @returns 
+     */
+    unicodeDecode(bytes) {
         let text = '';
         let i = 0;
     

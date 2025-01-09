@@ -2,7 +2,7 @@ import { config } from "./config";
 import { DataTypes } from "./DataTypes";
 import { world, system } from "@minecraft/server"
 import { PacketHandle, TypeHandle, listeners } from "./Handle";
-import { TextCoder } from "./TextEncoding"
+import { TextCoder } from "./Transcoder"
 const encoder = TextCoder // Named differently to en/decoder to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
 const decoder = TextCoder // but so that you could technically switch to them or another transcoder down the road
 
