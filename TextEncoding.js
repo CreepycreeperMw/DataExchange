@@ -6,10 +6,11 @@ for (let i = 0; i < charset.length; i++) {
 }
 export class TextCoder {
     /**
-     * 
-     * @param {string} text 
+     * Encodes text to a Uint8Array using the safe data transmittion charset
+     * @param {string} text Text to encode
+     * @param {number} [end=text.length] 
      */
-    static encode(text) {
+    static encode(text, end = text.length) {
         const length = text.length
         const res = new Uint8Array(length)
         for (let i = 0; i < length; i++) {
@@ -53,12 +54,18 @@ export class TextCoder {
     }
 
     /**
-     * 
+     * Decodes an Uint8Array to text with transmittion safe charset
      * @param {Uint8Array} bytes 
+     * @param {number} end 
      */
-    static decode(bytes) {
+    static decode(bytes, end) {
         let res = "";
-        bytes.forEach(byte=>res+=charset.charAt(byte));
+        // bytes.forEach(byte=>res+=charset.charAt(byte));
+
+        const endD = end ?? bytes.length
+        for (let i = 0; i < endD; i++) {
+            res += charset.charAt(bytes[i])
+        }
         return res;
     }
     unsafeDecode(bytes) {

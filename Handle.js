@@ -1,3 +1,4 @@
+import { config } from "./config";
 import { DataTypes } from "./DataTypes";
 import { TextCoder } from "./TextEncoding"
 
@@ -183,12 +184,10 @@ export class TypeHandle {
      * 
      * @param {(boolean | number | string)[]} data 
      */
-    encode(data) {
-        let arr = new Uint8Array(16384)
+    encode(data, i = 0) {
+        let arr = new Uint8Array(config.defaultEncodingBufferSize)
         let view = new DataView(arr.buffer)
         let length = arr.byteLength;
-
-        let i = 0;
 
         function allMoreIfNeeded(sizeRequired) {
             if((sizeRequired + index) <= length) return; 
@@ -213,7 +212,9 @@ export class TypeHandle {
 
             // Native datatypes internally referenced as a number form, so you can check if its a native type by using isNaN
             if(isNaN(dataType)) {
+                if(!(dataType instanceof TypeHandle)) throw "Error: type is neither a native datatype nor registered!"
 
+                dataType.encode()
             } else switch (dataType) {
                 case DataTypes.Char:
                     // TODO
@@ -330,6 +331,7 @@ export class TypeHandle {
                     return; // just continue, this datatype should never actually occur as is as a type, so this is just a fallback
             }
         })
+        return { byteArray: arr, index: i };
     }
 }
 
