@@ -30,8 +30,7 @@ export enum DataTypes {
 
     // Lists
     ByteArray = 14, // XXXX-XXXX CCCC-CCCC[?]  |  X = 8 bit integer element length declaration, C = Raw Byte data
-    Array = 15, // XXXX-XXXX C[?]  |  X = 8 bit integer element length declaration, C = Bits of the respective data type
-    BigArray = 16, // XXXX-XXXX XXXX-XXXX C[?]  |  X = 16 bit integer element length declaration, C = Bits of the respective data type
+    Array = 15, // <VARINT> C[?]  |  Prefixed by a varint indicating the length of the array, C = Bits of the respective data type
 }
 
 type DataType = DataTypes | TypeHandle | PacketHandle;

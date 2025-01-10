@@ -1,6 +1,7 @@
 import { config } from "./config";
 import { DataTypes } from "./DataTypes";
 import { TextCoder } from "./Transcoder"
+import { decodeVarint, encodeVarint } from "./utils/encoding";
 
 const encoder = TextCoder // Named differently to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
 const decoder = TextCoder // but so that you could technically switch to them down the road
@@ -86,31 +87,18 @@ export class TypeHandle {
                     output[key] = view.getUint32(index)
                     index+=4;
                     break;
-                case DataTypes.VarInt:
-                case DataTypes.SignedVarInt:
-                    let value = 0;
-                    let shift = 0;
-
-                    while (true) {
-                        let byte = view.getUint8(index);
-
-                        // Extract the lower 7 bits and add them
-                        value |= (byte & 0x7f) << shift;
-
-                        // If highest bit = 0, then this is the end
-                        if ((byte & 0x80) === 0) {
-                            break;
-                        }
-
-                        shift += 7;
-                        index++;
-                    }
-
-                    if(dataType===DataTypes.SignedVarInt) {
-                        value = (value >>> 1) ^ -(value & 1);
-                    }
+                case DataTypes.VarInt: {
+                    let {decodedValue: value, index: i} = decodeVarint(view, index)
                     output[key] = value
+                    index = i;
                     break;
+                }
+                case DataTypes.SignedVarInt: {
+                    let {decodedValue: value, index: i} = decodeVarint(view, index)
+                    output[key] = (value >>> 1) ^ -(value & 1); // Use zigzag en/decoding to make it signed
+                    index = i;
+                    break;
+                }
                 case DataTypes.Boolean:
                 case DataTypes.BooleanGroup:
                     /*
@@ -134,22 +122,24 @@ export class TypeHandle {
                     output[key] = bool
                     break;
                 case DataTypes.StringLiteral: {
-                    const length = view.getUint16(index);
-                    index+=2;
+                    // Get the length of the int 16
+                    const { decodedValue: length, index: i} = decodeVarint(view, index)
+                    index = i;
                     const end = index + length;
 
+
+                    
                     let stringByteArray = byteArray.subarray(index, end)
                     index = end
-                    output[key] = decoder.decode(stringByteArray)
+                    output[key] = decoder.unicodeDecode(stringByteArray)
                     break;
                 }
                 
                 case DataTypes.Array:
                 case DataTypes.BigArray: {
-                    const length = dataType === DataTypes.Array ? view.getUint8(index) : view.getUint16(index);
-
-                    if(dataType === DataTypes.Array) index++;
-                    else index+=2;
+                    // Calculate the length and step to the next free byte
+                    const {decodedValue: length, index: i} = decodeVarint(view, index)
+                    index = i;
                     
                     const dataType = this.datatypes[key]
                     const array = []
@@ -160,7 +150,6 @@ export class TypeHandle {
                     }
                 
                     output[key] = array
-
                     break;
                 }
                 case DataTypes.ByteArray: {
@@ -189,7 +178,7 @@ export class TypeHandle {
         let view = new DataView(arr.buffer)
         let length = arr.byteLength;
 
-        function allMoreIfNeeded(sizeRequired) {
+        function allMoreIfNeeded(sizeRequired) { // Allocates more bytes if it runs out of them and increases the index
             if((sizeRequired + index) <= length) return; 
             const biggerArray = new Uint8Array(arr.buffer, 0, length * 2);
 
@@ -207,7 +196,7 @@ export class TypeHandle {
         const types = Object.values(this.datatypes);
 
         data.forEach((arg, i) => {
-            let index = i;
+            let index = i; // TODO : Figure out this index problem
             const dataType = types[index];
 
             // Native datatypes internally referenced as a number form, so you can check if its a native type by using isNaN
@@ -218,7 +207,7 @@ export class TypeHandle {
             } else switch (dataType) {
                 case DataTypes.Char:
                     // TODO
-                    encoder.encode()
+                    
                     break;
                 case DataTypes.Int8:
                     if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
@@ -271,20 +260,15 @@ export class TypeHandle {
                 case DataTypes.SignedVarInt:
                     if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
                     arg = (arg << 1) ^ (arg >> 31);
-                case DataTypes.VarInt:
+                case DataTypes.VarInt: {
                     if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
-                    const bytes = [];
-                    while (value > 127) {
-                        bytes.push((value & 0x7F) | 0x80);
-                        value >>>= 7;
-                    }
-                    bytes.push(value & 0x7F);
-
-                    let uint8arr = Uint8Array.from(bytes);
                     
+                    let uint8arr = encodeVarint(arg);
+
                     allMoreIfNeeded(uint8arr.byteLength);
                     arr.set(uint8arr, index);
                     break;
+                }
                 case DataTypes.Boolean:
                 case DataTypes.BooleanGroup:
                     if(typeof arg !== "boolean") throw "Unexpected argument at parameter ["+i+"]. Expected a boolean";
@@ -293,35 +277,47 @@ export class TypeHandle {
                     if(boolAmount % 8 === 0) {
                         latestBoolI = index;
                         allMoreIfNeeded(1);
-                        bytes[latestBoolI] = 0;
+                        arr[latestBoolI] = 0;
                     }
 
                     // Set the bit equal to the bool of according byte
-                    let byte = bytes[latestBoolI];
+                    let byte = arr[latestBoolI];
                     if(arg) byte = byte | (1 << boolAmount) // true
                     else byte = byte & ~(1 << boolAmount) // false
 
                     boolAmount++;
                     view.setUint8(index, byte);
                     break;
-                case DataTypes.StringLiteral:
+                case DataTypes.StringLiteral: {
+                    if(typeof arg !== "string") throw "Unexpected argument at parameter ["+i+"]. Expected a string";
 
+                    // Decode the string to byte array
+                    let encodedString = TextCoder.unicodeEncode(arg)
+                    
+                    // Calculate length and add it as a var int
+                    const length = encodedString.length
+                    const encodedLengthNum = encodeVarint(length);
+
+                    allMoreIfNeeded(encodedLengthNum.byteLength);
+                    arr.set(encodedLengthNum, index)
+                    index += length; // Increase the virtual index (see q&a virtual index)
+
+                    arr.set(encodedString, index)
                     break;
+                }
                 case DataTypes.Array:
-                case DataTypes.BigArray:
                     if(!Array.isArray(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected an array";
                     
                     const length = arg.length;
-                    if(dataType === DataTypes.Array) {
-                        if(length > 255) throw "Array provided is too large, please use a big array type if you need more space"
-                        view.setUint8(index, length)
-                    } else {
-                        if(length > 65535) throw "(Big-) Array provided is too large. Please use multiple arrays if you manage to exceed the max size"
-                        view.setUint16(index, length)
-                    }
+                    const encodedLengthNum = encodeVarint(length);
 
+                    allMoreIfNeeded(encodedLengthNum.byteLength);
+                    arr.set(encodedLengthNum, index)
+                    index += length;
+
+                    // TODO : FIGURE OUT HOW TO SKIP PAST THE NEXT DATATYPE By 1 (as an array of a specific datatype takes up 1 js var but 2 datatypes )
                     // TODO : ADD THE INDIVIDUAL ELEMENTS
-
+                    
                     break;
                 case DataTypes.ByteArray:
                     // TODO : obv 

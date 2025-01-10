@@ -4,7 +4,7 @@ export const DataTypes = {
     Int16: 2,
     Int32: 3,
     SignedVarInt: 4,
-    // Unsigned: 5,
+    Unsigned: 5,
     UnsignedInt8: 6,
     UnsignedInt16: 7,
     UnsignedInt32: 8,
@@ -16,9 +16,9 @@ export const DataTypes = {
     StringLiteral: 13,
     ByteArray: 14,
     Array: 15,
-    BigArray: 16,
 }
 
+/*  This is deprecated and was long replaced by the respective var in System.js
 export let builtInDataTypes = [
     'ch',
     'int8',
@@ -37,8 +37,7 @@ export let builtInDataTypes = [
     'string',
     'boolgroup',
     'array',
-    'bigarray'
-]
+] */
 
 /*
 0

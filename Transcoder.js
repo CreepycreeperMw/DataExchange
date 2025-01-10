@@ -8,9 +8,8 @@ export class TextCoder {
     /**
      * Encodes text to a Uint8Array using the safe data transmittion charset
      * @param {string} text Text to encode
-     * @param {number} [end=text.length] 
      */
-    static encode(text, end = text.length) {
+    static encode(text) {
         const length = text.length
         const res = new Uint8Array(length)
         for (let i = 0; i < length; i++) {
@@ -23,7 +22,7 @@ export class TextCoder {
      * @param {string} text
      * @returns 
      */
-    unicodeEncode(text) {
+    static unicodeEncode(text) {
         let bytes = [];
         for (let i = 0; i < text.length; i++) {
             let codePoint = text.charCodeAt(i);
@@ -78,7 +77,7 @@ export class TextCoder {
      * @param {Uint8Array} bytes 
      * @returns 
      */
-    unicodeDecode(bytes) {
+    static unicodeDecode(bytes) {
         let text = '';
         let i = 0;
     
