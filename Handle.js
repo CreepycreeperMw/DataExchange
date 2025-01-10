@@ -1,7 +1,7 @@
 import { config } from "./config";
 import { DataTypes } from "./DataTypes";
 import { TextCoder } from "./Transcoder"
-import { decodeVarint, encodeVarint } from "./utils/encoding";
+import { decodeVarint, encodeVarint, sendMsg } from "./utils";
 
 const encoder = TextCoder // Named differently to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
 const decoder = TextCoder // but so that you could technically switch to them down the road
@@ -23,7 +23,7 @@ export class TypeHandle {
 
         this.name = name;
         this.id = id;
-        /** @type {import("./DataTypes").DataTypeArray} */
+        /** @type {(PacketHandle | TypeHandle)[]} */
         this.datatypes = datatypes;
     }
 
@@ -135,15 +135,14 @@ export class TypeHandle {
                     break;
                 }
                 
-                case DataTypes.Array:
-                case DataTypes.BigArray: {
+                case DataTypes.Array: {
                     // Calculate the length and step to the next free byte
                     const {decodedValue: length, index: i} = decodeVarint(view, index)
                     index = i;
                     
-                    const dataType = this.datatypes[key]
+                    const dataType = this.datatypes[key] // TODO : SKIP THE DATATYPE HERE AS WELL
                     const array = []
-                    for (let i = 0; i < length; i++) {
+                    for (let childI = 0; childI < length; childI++) {
                         let {decodedParameters, index: i} = dataType.decode(byteArray, index);
                         array.push(decodedParameters);
                         index = i;
@@ -153,8 +152,8 @@ export class TypeHandle {
                     break;
                 }
                 case DataTypes.ByteArray: {
-                    const length = view.getUint16(index);
-                    index += 2;
+                    const {decodedValue: length, index: i} = decodeVarint(view, index)
+                    index = i;
 
                     let arr = byteArray.subarray(index, index + length)
                     output[key] = arr
@@ -172,22 +171,28 @@ export class TypeHandle {
     /**
      * 
      * @param {(boolean | number | string)[]} data 
+     * @param {number} [bI=0] Buffer Index, can be used to skip certain elements in the provided data
      */
-    encode(data, i = 0) {
+    encode(data, bI = 0) {
         let arr = new Uint8Array(config.defaultEncodingBufferSize)
         let view = new DataView(arr.buffer)
         let length = arr.byteLength;
 
         function allMoreIfNeeded(sizeRequired) { // Allocates more bytes if it runs out of them and increases the index
-            if((sizeRequired + index) <= length) return; 
+            // Increase the index
+            let oldI = bI;
+            bI += sizeRequired;
+
+            // Exit if array doesnt need to be enlarged
+            if((sizeRequired + bI) <= length) return oldI;
+            // Increase array size
             const biggerArray = new Uint8Array(arr.buffer, 0, length * 2);
 
             arr = biggerArray;
             view = new DataView(arr.buffer);
             length = arr.byteLength;
 
-            // Increase the index
-            i += sizeRequired;
+            return oldI;
         }
         
         let latestBoolI = 0; // This keeps track of the byte to store the bool in
@@ -195,73 +200,82 @@ export class TypeHandle {
 
         const types = Object.values(this.datatypes);
 
-        data.forEach((arg, i) => {
-            let index = i; // TODO : Figure out this index problem
-            const dataType = types[index];
+        data.forEach((arg, argI) => {
+            let index = bI; // TODO : Figure out this index problem
+            const dataType = types[argI];
 
             // Native datatypes internally referenced as a number form, so you can check if its a native type by using isNaN
             if(isNaN(dataType)) {
                 if(!(dataType instanceof TypeHandle)) throw "Error: type is neither a native datatype nor registered!"
 
-                dataType.encode()
+                let {byteArray, index: i} = dataType.encode(arg, bI)
+                arr.set(byteArray, bI)
+                bI = i;
             } else switch (dataType) {
                 case DataTypes.Char:
-                    // TODO
-                    
+                    let value;
+                    if(typeof arg === "string") {
+                        value = encoder.encode(arg[0])[0]
+                    } else if(!isNaN(arg)) {
+                        if(value > 255 || value < 0) throw "Range Error at parameter ["+bI+"]. Number must be in range from 0-255"
+                        value = arg;
+                    } else throw "Unexpected argument at parameter ["+bI+"]. Expected a (string) char from the charset or a number"
+
+                    view.setUint8(value)
                     break;
                 case DataTypes.Int8:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     allMoreIfNeeded(1);
 
                     view.setInt8(index, arg)
                     break;
                 case DataTypes.Int16:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     allMoreIfNeeded(2);
 
                     view.setInt16(index, arg)
                     break;
                 case DataTypes.Int32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     allMoreIfNeeded(4);
 
                     view.setInt32(index, arg)
                     break;
                 case DataTypes.Float32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     allMoreIfNeeded(4);
 
                     view.setFloat32(index, arg)
                     break;
                 case DataTypes.Float64:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     allMoreIfNeeded(8);
 
                     view.setFloat64(index, arg)
                     break;
                 case DataTypes.UnsignedInt8:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     allMoreIfNeeded(1);
 
                     view.setUint8(index, arg)
                     break;
                 case DataTypes.UnsignedInt16:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     allMoreIfNeeded(2);
 
                     view.setUint16(index, arg)
                     break;
                 case DataTypes.UnsignedInt32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     allMoreIfNeeded(4);
 
                     view.setUint32(index, arg)
                     break;
                 case DataTypes.SignedVarInt:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     arg = (arg << 1) ^ (arg >> 31);
                 case DataTypes.VarInt: {
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
                     
                     let uint8arr = encodeVarint(arg);
 
@@ -271,7 +285,7 @@ export class TypeHandle {
                 }
                 case DataTypes.Boolean:
                 case DataTypes.BooleanGroup:
-                    if(typeof arg !== "boolean") throw "Unexpected argument at parameter ["+i+"]. Expected a boolean";
+                    if(typeof arg !== "boolean") throw "Unexpected argument at parameter ["+bI+"]. Expected a boolean";
 
                     // If the previous bool byte still has more bits for bools use those otherwise allocate new byte
                     if(boolAmount % 8 === 0) {
@@ -289,45 +303,57 @@ export class TypeHandle {
                     view.setUint8(index, byte);
                     break;
                 case DataTypes.StringLiteral: {
-                    if(typeof arg !== "string") throw "Unexpected argument at parameter ["+i+"]. Expected a string";
+                    if(typeof arg !== "string") throw "Unexpected argument at parameter ["+bI+"]. Expected a string";
 
                     // Decode the string to byte array
                     let encodedString = TextCoder.unicodeEncode(arg)
                     
                     // Calculate length and add it as a var int
-                    const length = encodedString.length
+                    const length = encodedString.byteLength;
                     const encodedLengthNum = encodeVarint(length);
 
-                    allMoreIfNeeded(encodedLengthNum.byteLength);
-                    arr.set(encodedLengthNum, index)
-                    index += length; // Increase the virtual index (see q&a virtual index)
-
-                    arr.set(encodedString, index)
+                    arr.set(encodedLengthNum, allMoreIfNeeded(encodedLengthNum.byteLength)) // Add the string length
+                    arr.set(encodedString, allMoreIfNeeded(length)) // Add the string data
                     break;
                 }
-                case DataTypes.Array:
-                    if(!Array.isArray(arg)) throw "Unexpected argument at parameter ["+i+"]. Expected an array";
+                case DataTypes.Array: {
+                    if(!Array.isArray(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected an array";
                     
+                    // Length
                     const length = arg.length;
                     const encodedLengthNum = encodeVarint(length);
 
-                    allMoreIfNeeded(encodedLengthNum.byteLength);
-                    arr.set(encodedLengthNum, index)
-                    index += length;
+                    // Append the length varint and make sure there is space
+                    arr.set(encodedLengthNum, allMoreIfNeeded(encodedLengthNum.byteLength))
+
+                    // Encode the arrays children
+                    const dataType = this.datatypes[bI] // TODO : Change this when the index problem is solved
+                    for (let childI = 0; bI < length; childI++) {
+                        const {byteArray: encodedData, index: nextI} = dataType.encode(arg, bI);
+                        
+                        // Allocate the size needed for this byte size and add the elements data to the bytearray
+                        arr.set(encodedData, allMoreIfNeeded(nextI - index))
+                    }
 
                     // TODO : FIGURE OUT HOW TO SKIP PAST THE NEXT DATATYPE By 1 (as an array of a specific datatype takes up 1 js var but 2 datatypes )
-                    // TODO : ADD THE INDIVIDUAL ELEMENTS
-                    
                     break;
-                case DataTypes.ByteArray:
-                    // TODO : obv 
+                }
+                case DataTypes.ByteArray: {
+                    if(!(arg instanceof Uint8Array)) throw "Unexpected argument at parameter ["+bI+"]. Expected an Uint8Array";
 
+                    // Length
+                    const length = arg.byteLength;
+                    const encodedLengthNum = encodeVarint(length);
+
+                    arr.set(encodedLengthNum, allMoreIfNeeded(encodedLengthNum.byteLength))
+                    arr.set(arg, allMoreIfNeeded(length))
                     break;
+                }
                 case DataTypes.Unsigned:
                     return; // just continue, this datatype should never actually occur as is as a type, so this is just a fallback
             }
         })
-        return { byteArray: arr, index: i };
+        return { byteArray: arr, index: bI };
     }
 }
 
@@ -350,7 +376,11 @@ export class PacketHandle extends TypeHandle {
      * @param {(string|boolean|number)[]} data 
      */
     send(...data) {
-        
+        // Encode the data arguments to binary
+        const {byteArray, index} = data.length > 1 ? this.encode(data) : this.encode(data[0])
+        const payload = decoder.decode(byteArray, index) // Convert the binary byte array to strings
+
+        sendMsg(`packet:${this.id}`, payload)
     }
 
     /**

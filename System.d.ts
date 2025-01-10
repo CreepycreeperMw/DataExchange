@@ -42,13 +42,6 @@ export class System {
      * @returns
      */
     static async untilLoaded(): Promise<boolean>
-
-    /**
-     * Sends a scriptevent message provided an id (namespaced) and msg
-     * @param id Id of the message. Has to have a namespace prefix and cant be minecraft:
-     * @param msg Data string of the message
-     */
-    static sendMsg(id: string, msg: string): void
 }
 
 /**

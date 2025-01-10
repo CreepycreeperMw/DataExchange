@@ -3,6 +3,8 @@ import { DataTypes } from "./DataTypes";
 import { world, system } from "@minecraft/server"
 import { PacketHandle, TypeHandle, listeners } from "./Handle";
 import { TextCoder } from "./Transcoder"
+import * as utils from "./utils"
+
 const encoder = TextCoder // Named differently to en/decoder to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
 const decoder = TextCoder // but so that you could technically switch to them or another transcoder down the road
 
@@ -32,7 +34,7 @@ system.runInterval(()=>{
     }
 },1)
 
-System.sendMsg("registry:loaded", "") // Report that system has loaded
+utils.sendMsg("registry:loaded", "") // Report that system has loaded
 // (Loading End)
 
 /**
@@ -103,7 +105,7 @@ export class System {
         const data = name + ' ' + typeArray.join(";")
 
         // Send the register request
-        this.sendMsg("registry:register", data)
+        utils.sendMsg("registry:register", data)
 
         // Return a new promise that resolves once the packet type has got registered globally
         let typeId = await new Promise((res, rej)=>{
@@ -136,7 +138,7 @@ export class System {
         }
 
         // Send the register request
-        this.sendMsg("registry:register", data)
+        utils.sendMsg("registry:register", data)
 
         // Return a new promise that resolves once the packet type has got registered globally
         let typeId = await new Promise((res, rej)=>{
@@ -199,15 +201,6 @@ export class System {
                 loadingPromises.push(res)
             })
         }
-    }
-
-    /**
-     * Sends a scriptevent message provided an id (namespaced) and msg
-     * @param {string} id Id of the message. Has to have a namespace prefix and cant be minecraft:
-     * @param {string} msg Data string of the message
-     */
-    static sendMsg(id, msg) {
-        world.getDimension("minecraft:overworld").runCommand(`scriptevent "${id.replace(/\\/g, "\\\\").replace(/\"/g, "\\\"")}" ${msg}`)
     }
 }
 

@@ -1,3 +1,4 @@
+import { world } from "@minecraft/server"
 
 /**
  * Encodes a number to bits as a Varint
@@ -42,4 +43,13 @@ export function decodeVarint(view, index=0) {
     }
 
     return {decodedValue: value, index: index};
+}
+
+/**
+ * Sends a scriptevent message provided an id (namespaced) and msg
+ * @param {string} id Id of the message. Has to have a namespace prefix and cant be minecraft:
+ * @param {string} msg Data string of the message
+ */
+export function sendMsg(id, msg) {
+    world.getDimension("minecraft:overworld").runCommand(`scriptevent "${id.replace(/\\/g, "\\\\").replace(/\"/g, "\\\"")}" ${msg}`)
 }

@@ -18,7 +18,7 @@ export class TextCoder {
         return res;
     }
     /**
-     * Uses unsafe unicode characters so it cannot be used for data transmission
+     * Uses (potentially unsafe) unicode character encoding so it cannot be used for safe data transmission
      * @param {string} text
      * @returns 
      */
@@ -73,7 +73,8 @@ export class TextCoder {
         return res;
     }
     /**
-     * Uses unsafe unicode characters so it cannot be used for data transmission
+     * 
+     * Uses (potentially unsafe) unicode character decoding so it cannot be used for safe data transmission
      * @param {Uint8Array} bytes 
      * @returns 
      */
