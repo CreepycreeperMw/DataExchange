@@ -138,7 +138,6 @@ export class TypeHandle {
                     output[key] = decoder.unicodeEncode(stringByteArray)
                     break;
                 }
-                
                 case DataTypes.Array: {
                     // Calculate the length and step to the next free byte
                     const {decodedValue: length, index: i} = decodeVarint(view, index)

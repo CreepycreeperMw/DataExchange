@@ -37,7 +37,7 @@ system.runInterval(()=>{
     }
 },1)
 
-utils.sendMsg("registry:loaded", "") // Report that system has loaded
+system.run(()=>utils.sendMsg("registry:loaded", "")) // Report that system has loaded
 // (Loading End)
 
 /**
@@ -90,7 +90,7 @@ export class System {
 
         // Return a new promise that resolves once the packet type has got registered globally
         let typeId = await new Promise((res, rej)=>{
-            if(registerQueue.has(data) && registerQueue.get(data)) registerQueue.set(data, [res])
+            if(!registerQueue.has(data) || !registerQueue.get(data)) registerQueue.set(data, [res])
             else registerQueue.get(data).push(res)
 
             system.runTimeout(()=>{
