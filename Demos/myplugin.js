@@ -37,7 +37,7 @@ let area = {
 
 PlayerEnterAreaPacket.send(player.typeId, area.start, area.end)
 PlayerEnterAreaPacket.listen((output)=>{
-    output.unshift()
+    let { id, start, end } = output;
     let player = world.getEntity(id)
     world.sendMessage(`Player ${player.nameTag} is between XYZ ${start.x} ${start.y} ${start.z} and XYZ ${end.x} ${end.y} ${end.z} `)
 })
