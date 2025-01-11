@@ -228,93 +228,84 @@ export class TypeHandle {
                     if(typeof arg === "string") {
                         value = decoder.decode(arg[0])[0]
                     } else if(!isNaN(arg)) {
-                        if(value > 255 || value < 0) throw "Range Error at parameter ["+bI+"]. Number must be in range from 0-255"
+                        if(value > 255 || value < 0) throw "Range Error at parameter ["+key+"]. Number must be in range from 0-255"
                         value = arg;
-                    } else throw "Unexpected argument at parameter ["+bI+"]. Expected a (string) char from the charset or a number"
+                    } else throw "Unexpected argument at parameter ["+key+"]. Expected a (string) char from the charset or a number"
 
                     view.setUint8(value)
                     break;
                 case DataTypes.Int8:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
-                    allMoreIfNeeded(1);
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
 
-                    view.setInt8(index, arg)
+                    view.setInt8(allMoreIfNeeded(1), arg)
                     break;
                 case DataTypes.Int16:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
-                    allMoreIfNeeded(2);
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
 
-                    view.setInt16(index, arg)
+                    view.setInt16(allMoreIfNeeded(2), arg)
                     break;
                 case DataTypes.Int32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
-                    allMoreIfNeeded(4);
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
 
-                    view.setInt32(index, arg)
+                    view.setInt32(allMoreIfNeeded(4), arg)
                     break;
                 case DataTypes.Float32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
-                    allMoreIfNeeded(4);
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
 
-                    view.setFloat32(index, arg)
+                    view.setFloat32(allMoreIfNeeded(4), arg)
                     break;
                 case DataTypes.Float64:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
-                    allMoreIfNeeded(8);
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
 
-                    view.setFloat64(index, arg)
+                    view.setFloat64(allMoreIfNeeded(8), arg)
                     break;
                 case DataTypes.UnsignedInt8:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
-                    allMoreIfNeeded(1);
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
 
-                    view.setUint8(index, arg)
+                    view.setUint8(allMoreIfNeeded(1), arg)
                     break;
                 case DataTypes.UnsignedInt16:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
-                    allMoreIfNeeded(2);
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
 
-                    view.setUint16(index, arg)
+                    view.setUint16(allMoreIfNeeded(2), arg)
                     break;
                 case DataTypes.UnsignedInt32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
-                    allMoreIfNeeded(4);
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
 
-                    view.setUint32(index, arg)
+                    view.setUint32(allMoreIfNeeded(4), arg)
                     break;
                 case DataTypes.SignedVarInt:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
                     arg = (arg << 1) ^ (arg >> 31);
                 case DataTypes.VarInt: {
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected a number";
+                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
                     
                     let uint8arr = encodeVarint(arg);
 
-                    allMoreIfNeeded(uint8arr.byteLength);
-                    arr.set(uint8arr, index);
+                    arr.set(uint8arr, allMoreIfNeeded(uint8arr.byteLength));
                     break;
                 }
                 case DataTypes.Boolean:
                 case DataTypes.BooleanGroup:
-                    if(typeof arg !== "boolean") throw "Unexpected argument at parameter ["+bI+"]. Expected a boolean";
+                    if(typeof arg !== "boolean") throw "Unexpected argument at parameter ["+key+"]. Expected a boolean";
 
                     // If the previous bool byte still has more bits for bools use those otherwise allocate new byte
                     if(boolAmount % 8 === 0) {
-                        latestBoolI = index;
+                        latestBoolI = bI;
                         allMoreIfNeeded(1);
                         arr[latestBoolI] = 0;
                     }
-
+                    
                     // Set the bit equal to the bool of according byte
                     let byte = arr[latestBoolI];
                     if(arg) byte = byte | (1 << boolAmount) // true
                     else byte = byte & ~(1 << boolAmount) // false
 
                     boolAmount++;
-                    view.setUint8(index, byte);
+                    view.setUint8(latestBoolI, byte);
                     break;
                 case DataTypes.StringLiteral: {
-                    if(typeof arg !== "string") throw "Unexpected argument at parameter ["+bI+"]. Expected a string";
+                    if(typeof arg !== "string") throw "Unexpected argument at parameter ["+key+"]. Expected a string";
 
                     // Decode the string to byte array
                     let encodedString = Transcoder.unicodeDecode(arg)
@@ -328,7 +319,7 @@ export class TypeHandle {
                     break;
                 }
                 case DataTypes.Array: {
-                    if(!Array.isArray(arg)) throw "Unexpected argument at parameter ["+bI+"]. Expected an array";
+                    if(!Array.isArray(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected an array";
                     
                     // Length
                     const length = arg.length;
@@ -343,13 +334,13 @@ export class TypeHandle {
                         const {byteArray: encodedData, index: nextI} = dataType.encode(arg, bI);
                         
                         // Allocate the size needed for this byte size and add the elements data to the bytearray
-                        arr.set(encodedData, allMoreIfNeeded(nextI - index))
+                        arr.set(encodedData, allMoreIfNeeded(nextI - bI))
                     }
 
                     continue;
                 }
                 case DataTypes.ByteArray: {
-                    if(!(arg instanceof Uint8Array)) throw "Unexpected argument at parameter ["+bI+"]. Expected an Uint8Array";
+                    if(!(arg instanceof Uint8Array)) throw "Unexpected argument at parameter ["+key+"]. Expected an Uint8Array";
 
                     // Length
                     const length = arg.byteLength;
@@ -395,7 +386,7 @@ export class PacketHandle extends TypeHandle {
         const payload = encoder.encode(byteArray, index) // Convert the binary byte array to strings
 
         const requestId = randomId(12);
-        const length = byteArray.byteLength;
+        const length = payload.length;
 
         if(length > config.maxMessageSize) {
             // Send payload in portions
@@ -411,10 +402,10 @@ export class PacketHandle extends TypeHandle {
                 const orderNumber = portionCount - i;
                 const orderId = encoder.encodeId(orderNumber);
                 
-                this.sendRequest(`packet:${this.id}-${requestId}-${orderId}`, payload.substring(i*config.maxMessageSize, (i+1)*config.maxMessageSize), requestId + orderId)
+                this.sendRequest(`packet:${this.id}-${requestId}-${orderId}`, `"${payload.substring(i*config.maxMessageSize, (i+1)*config.maxMessageSize)}"`, requestId + orderId)
             }
 
-        } else this.sendRequest(`packet:${this.id}-${requestId}`, payload, requestId)
+        } else this.sendRequest(`packet:${this.id}-${requestId}`, `"${payload}"`, requestId)
     }
 
     /**
@@ -423,7 +414,7 @@ export class PacketHandle extends TypeHandle {
      * @param {(output: DecodedStruct)=>void} callback 
      */
     listen(callback) {
-        if(listeners[this.id]) listeners[this.id] = [ callback ]
+        if(!listeners[this.id]) listeners[this.id] = [ callback ]
         else listeners[this.id].push(callback)
     }
 

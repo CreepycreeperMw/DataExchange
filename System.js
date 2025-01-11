@@ -68,14 +68,16 @@ system.afterEvents.scriptEventReceive.subscribe(event=>{
             packetId++;
         }
     }
-},{namespaces:["registry"]})
+}, {namespaces:["registry"]})
 
+// Declaration of the built-in datatype array (internally used)
+export let builtInDataTypes;
 export class System {
     /**
      * Registers a Type to the system and returns an TypeHandle that can be
      * referenced and used in other types or packets
      * @param {string} name
-     * @param {DataType[]|{[name: string]: DataType}} packetInfoTypes
+     * @param {DataTypes[]|{[name: string]: DataTypes}} packetInfoTypes
      * @returns {Promise<TypeHandle>}
      */
     static async registerType(name, packetInfoTypes) {
@@ -98,7 +100,9 @@ export class System {
             }, 1000)
         })
 
-        return new TypeHandle(name, typeId, packetInfoTypes)
+        const handle = new TypeHandle(name, typeId, packetInfoTypes)
+        registerStack[typeId] = handle
+        return handle;
     }
     /**
      * Registers a Type to the system and returns an PacketConstruct that holds methods that can be used to send the packet and manage it
@@ -118,7 +122,7 @@ export class System {
 
         // Return a new promise that resolves once the packet type has got registered globally
         let typeId = await new Promise((res, rej)=>{
-            if(registerQueue.has(data)) registerQueue.set(data, [res])
+            if(!registerQueue.has(data) || !registerQueue.get(data)) registerQueue.set(data, [res])
             else registerQueue.get(data).push(res)
 
             system.runTimeout(()=>{
@@ -126,7 +130,9 @@ export class System {
             }, 1000)
         })
 
-        return new PacketHandle(name, typeId, packetInfoTypes)
+        const handle = new PacketHandle(name, typeId, packetInfoTypes)
+        registerStack[typeId] = handle
+        return handle;
     }
 
     /**
@@ -178,7 +184,38 @@ export class System {
             })
         }
     }
+
+    /**
+     * Haults the process until the 
+     * @returns {Promise<TypeHandle[]>}
+     */
+    static async getNativeTypes() {
+        // This registers the native types through the same api so that they always get a unique id. Ensures that types dont break across versions
+        if(!builtInDataTypes) builtInDataTypes = [
+            await System.registerType('ch', []),
+            await System.registerType('int8', []),
+            await System.registerType('int16', []),
+            await System.registerType('int32', []),
+            await System.registerType('varint', []),
+            '', // this is the unsigned enum member
+            await System.registerType('uint8', []),
+            await System.registerType('uint16', []),
+            await System.registerType('uint32', []),
+            await System.registerType('uvarint', []),
+        
+            await System.registerType('float32', []),
+            await System.registerType('float64', []),
+            await System.registerType('bool', []),
+            await System.registerType('string', []),
+            await System.registerType('boolgroup', []),
+            await System.registerType('array', []),
+            await System.registerType('bigarray', []),
+        ];
+        return builtInDataTypes;
+    }
 }
+
+await System.getNativeTypes(); // Registers the native types and keeps any external module from using native types before they are registered
 
 /** @type {{[requestId: string]: string[]}} */
 let multiRequestPackets = {}
@@ -187,11 +224,11 @@ system.afterEvents.scriptEventReceive.subscribe(async (event)=>{
     const [packetId, requestId, orderId] = packetHeader.split("-")
     if(sendPackets[requestId+(orderId??'')]) return sendPackets[requestId+(orderId??'')](true); // Check if the packet has been send by this addon (the callback is relevant in the future as I want to implement it resending the data incase it got dismissed for some reason, and running that callback tells the code that it got send)
 
-    let packetHandle = await System.getType(packetId)
+    let packetHandle = await System.getType(packetId);
 
     // Decode the data from the string to all their respective data types
-    let uint8arr = decoder.decode(event.message);
-    let output = packetHandle.decode(uint8arr);
+    let uint8arr = decoder.decode(event.message, 1, event.message.length-1); // Get everything between the ""
+    let output = packetHandle.decode(uint8arr).decodedParameters;
 
     // Check if payload is split into multiple payloads
     if(orderId && orderId != '') {
@@ -204,24 +241,4 @@ system.afterEvents.scriptEventReceive.subscribe(async (event)=>{
     })
 }, {namespaces: ["packet"]})
 
-// This registers the native types through the same api so that they always get a unique id. Ensures that types dont break across versions
-export let builtInDataTypes = [
-    await System.registerType('ch',[]),
-    await System.registerType('int8', []),
-    await System.registerType('int16', []),
-    await System.registerType('int32', []),
-    await System.registerType('varint', []),
-    '', // this is the unsigned enum member
-    await System.registerType('uint8', []),
-    await System.registerType('uint16', []),
-    await System.registerType('uint32', []),
-    await System.registerType('uvarint', []),
-
-    await System.registerType('float32', []),
-    await System.registerType('float64', []),
-    await System.registerType('bool', []),
-    await System.registerType('string', []),
-    await System.registerType('boolgroup', []),
-    await System.registerType('array', []),
-    await System.registerType('bigarray', [])
-]
+export default builtInDataTypes;

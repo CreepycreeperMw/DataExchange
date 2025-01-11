@@ -19,7 +19,7 @@ export const config = {
      * Default Amount of space allocated for encoding data arguments into the
      * byte array
      */
-    defaultEncodingBufferSize: 16384,
+    defaultEncodingBufferSize: 1024,
     /**
      * Max size per payload that minecraft can handle
      */

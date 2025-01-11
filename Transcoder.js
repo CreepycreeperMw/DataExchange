@@ -91,11 +91,12 @@ export class Transcoder {
      * Decodes text to a Uint8Array using the safe data transmittion charset
      * @param {string} text Text to encode
      */
-    static decode(text) {
-        const length = text.length
-        const res = new Uint8Array(length)
-        for (let i = 0; i < length; i++) {
-            res[i] = charMap.get(text[i])
+    static decode(text, start=0, end) {
+        const endLen = end ?? text.length;
+
+        const res = new Uint8Array(endLen);
+        for (let i = start; i < endLen; i++) {
+            res[i-start] = charMap.get(text[i])
         }
         return res;
     }

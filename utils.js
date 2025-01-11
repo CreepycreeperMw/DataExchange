@@ -1,4 +1,4 @@
-import { world } from "@minecraft/server"
+import { world, system } from "@minecraft/server"
 import { packetIdCharset } from "./Transcoder";
 import { DataTypes } from "./DataTypes";
 
@@ -40,13 +40,14 @@ export function decodeVarint(view, index=0) {
         // Extract the lower 7 bits and add them
         value |= (byte & 0x7f) << shift;
 
+        index++;
+
         // If highest bit = 0, then this is the end
         if ((byte & 0x80) === 0) {
             break;
         }
 
         shift += 7;
-        index++;
     }
 
     return {decodedValue: value, index: index};
