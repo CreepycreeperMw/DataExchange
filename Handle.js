@@ -1,10 +1,11 @@
 import { config } from "./config";
 import { DataTypes } from "./DataTypes";
-import { TextCoder } from "./Transcoder"
-import { decodeVarint, encodeVarint, sendMsg } from "./utils";
+import { Transcoder } from "./Transcoder"
+import { decodeVarint, encodeVarint, randomId, sendMsg } from "./utils";
+import { system } from "@minecraft/server"
 
-const encoder = TextCoder // Named differently to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
-const decoder = TextCoder // but so that you could technically switch to them down the road
+const encoder = Transcoder // Named differently to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
+const decoder = Transcoder // but so that you could technically switch to them down the road
 
 /** @type {{[packetId: string]: ((output: DecodedStruct)=>void)[]}} */ 
 export const listeners = {}
@@ -39,9 +40,12 @@ export class TypeHandle {
 
         let output = Array.isArray(this.datatypes) ? [] : {}
         let booleanOcc = new Array(8);
+        let skipDataType = false;
 
         // Loop over the array or the object (this method works with both)
         Object.keys(this.datatypes).forEach(key=>{
+            if(skipDataType) return; skipDataType = true;
+
             const dataType = this.datatypes[key]
             if(isNaN(dataType)) {
                 if(!(dataType instanceof TypeHandle)) throw "Error: type is neither a native datatype nor registered!"
@@ -52,7 +56,7 @@ export class TypeHandle {
             } else switch(dataType) {
                 case DataTypes.Char:
                     // Get 1 byte at index and decode it using Textdecoder to char value
-                    output[key] = decoder.decode(new Uint8Array([byteArray[index]]));
+                    output[key] = encoder.encode(new Uint8Array([byteArray[index]]));
                     index++;
                     break;
                 case DataTypes.Int8:
@@ -131,7 +135,7 @@ export class TypeHandle {
                     
                     let stringByteArray = byteArray.subarray(index, end)
                     index = end
-                    output[key] = decoder.unicodeDecode(stringByteArray)
+                    output[key] = decoder.unicodeEncode(stringByteArray)
                     break;
                 }
                 
@@ -140,16 +144,16 @@ export class TypeHandle {
                     const {decodedValue: length, index: i} = decodeVarint(view, index)
                     index = i;
                     
-                    const dataType = this.datatypes[key] // TODO : SKIP THE DATATYPE HERE AS WELL
+                    const dataType = this.datatypes[key]
                     const array = []
                     for (let childI = 0; childI < length; childI++) {
                         let {decodedParameters, index: i} = dataType.decode(byteArray, index);
                         array.push(decodedParameters);
                         index = i;
                     }
-                
+
                     output[key] = array
-                    break;
+                    return;
                 }
                 case DataTypes.ByteArray: {
                     const {decodedValue: length, index: i} = decodeVarint(view, index)
@@ -164,6 +168,7 @@ export class TypeHandle {
                 default:
                     break;
             }
+            skipDataType = false;
         })
         return { decodedParameters: output, index: index}
     }
@@ -172,6 +177,7 @@ export class TypeHandle {
      * 
      * @param {(boolean | number | string)[]} data 
      * @param {number} [bI=0] Buffer Index, can be used to skip certain elements in the provided data
+     * @returns {{ byteArray: Uint8Array, index: number }}
      */
     encode(data, bI = 0) {
         let arr = new Uint8Array(config.defaultEncodingBufferSize)
@@ -195,14 +201,20 @@ export class TypeHandle {
             return oldI;
         }
         
+        // Bools Logic
         let latestBoolI = 0; // This keeps track of the byte to store the bool in
         let boolAmount = 0;
 
-        const types = Object.values(this.datatypes);
+        const types = this.datatypes;
+        let skipDataType = false;
+        
+        // Loop through each element and encode it
+        for (let key in types) {
+            if(skipDataType) continue;
+            skipDataType = true;
 
-        data.forEach((arg, argI) => {
-            let index = bI; // TODO : Figure out this index problem
-            const dataType = types[argI];
+            const dataType = types[key]
+            let arg = data[key]
 
             // Native datatypes internally referenced as a number form, so you can check if its a native type by using isNaN
             if(isNaN(dataType)) {
@@ -215,7 +227,7 @@ export class TypeHandle {
                 case DataTypes.Char:
                     let value;
                     if(typeof arg === "string") {
-                        value = encoder.encode(arg[0])[0]
+                        value = decoder.decode(arg[0])[0]
                     } else if(!isNaN(arg)) {
                         if(value > 255 || value < 0) throw "Range Error at parameter ["+bI+"]. Number must be in range from 0-255"
                         value = arg;
@@ -306,7 +318,7 @@ export class TypeHandle {
                     if(typeof arg !== "string") throw "Unexpected argument at parameter ["+bI+"]. Expected a string";
 
                     // Decode the string to byte array
-                    let encodedString = TextCoder.unicodeEncode(arg)
+                    let encodedString = Transcoder.unicodeDecode(arg)
                     
                     // Calculate length and add it as a var int
                     const length = encodedString.byteLength;
@@ -327,7 +339,7 @@ export class TypeHandle {
                     arr.set(encodedLengthNum, allMoreIfNeeded(encodedLengthNum.byteLength))
 
                     // Encode the arrays children
-                    const dataType = this.datatypes[bI] // TODO : Change this when the index problem is solved
+                    const dataType = this.datatypes[key]
                     for (let childI = 0; bI < length; childI++) {
                         const {byteArray: encodedData, index: nextI} = dataType.encode(arg, bI);
                         
@@ -335,8 +347,7 @@ export class TypeHandle {
                         arr.set(encodedData, allMoreIfNeeded(nextI - index))
                     }
 
-                    // TODO : FIGURE OUT HOW TO SKIP PAST THE NEXT DATATYPE By 1 (as an array of a specific datatype takes up 1 js var but 2 datatypes )
-                    break;
+                    continue;
                 }
                 case DataTypes.ByteArray: {
                     if(!(arg instanceof Uint8Array)) throw "Unexpected argument at parameter ["+bI+"]. Expected an Uint8Array";
@@ -350,13 +361,17 @@ export class TypeHandle {
                     break;
                 }
                 case DataTypes.Unsigned:
-                    return; // just continue, this datatype should never actually occur as is as a type, so this is just a fallback
+                    break; // just continue, this datatype should never actually occur as is as a type, so this is just a fallback
             }
-        })
+
+            skipDataType = false;
+        }
         return { byteArray: arr, index: bI };
     }
 }
 
+/** Stores all the outgoing packet requests until its confirmed they have been send */
+export const sendPackets = {};
 export class PacketHandle extends TypeHandle {
     /**
      * The Packet Handle holds methods to send this packet type
@@ -378,9 +393,29 @@ export class PacketHandle extends TypeHandle {
     send(...data) {
         // Encode the data arguments to binary
         const {byteArray, index} = data.length > 1 ? this.encode(data) : this.encode(data[0])
-        const payload = decoder.decode(byteArray, index) // Convert the binary byte array to strings
+        const payload = encoder.encode(byteArray, index) // Convert the binary byte array to strings
 
-        sendMsg(`packet:${this.id}`, payload)
+        const requestId = randomId(12);
+        const length = byteArray.byteLength;
+
+        if(length > config.maxMessageSize) {
+            // Send payload in portions
+            let portionCountDec = length / config.maxMessageSize;
+            let portionCount = Math.floor(portionCountDec)
+            if(portionCount != portionCountDec) portionCount++; // This is for the rest result which isnt an entire portion
+            if(portionCount > 255) throw "Packet length too long! You cannot send this much data at once."
+
+            for (let i = 0; i < portionCount; i++) {
+                /* The orderNumber is the reverse number of the order they were decoded in.
+                 * This way the algorhytm knows which element is the last (0) without any additional information
+                 * and the length of the array in which the requests are cached in */
+                const orderNumber = portionCount - i;
+                const orderId = encoder.encodeId(orderNumber);
+                
+                this.sendRequest(`packet:${this.id}-${requestId}-${orderId}`, payload.substring(i*config.maxMessageSize, (i+1)*config.maxMessageSize), requestId + orderId)
+            }
+
+        } else this.sendRequest(`packet:${this.id}-${requestId}`, payload, requestId)
     }
 
     /**
@@ -391,5 +426,28 @@ export class PacketHandle extends TypeHandle {
     listen(callback) {
         if(listeners[this.id]) listeners[this.id] = [ callback ]
         else listeners[this.id].push(callback)
+    }
+
+    /**
+     * Sends off the packet and ensures it got send.
+     * @param {string} head The encoded data string of the head
+     * @param {string} body The encoded data string of the body
+     * @param {string} id Id of the request. In this implementation this id is the requestId + orderId
+     */
+    async sendRequest(head, body, id) {
+        // Try to send the request as much times as configured before giving up
+        let success = false
+        for (let tries = 0; tries < config.maxSendTries; tries++) {
+            // Send the request
+            sendMsg(head, body)
+
+            success = await new Promise((res)=>{
+                sendPackets[id] = res // Wait for the system to confirm that the request has been send
+                system.waitTicks(40).then(res) // Wait for Minecraft to "timeout" the request attempt. waitTicks() returns void which makes the success check false
+            })
+            // Check if the packet has been send
+            if(success) break;
+        }
+        if(!success) throw "Fatal Error: Unable to send packet request <[ "+head+" ]>.\nBody: "+body
     }
 }

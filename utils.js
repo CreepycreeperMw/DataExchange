@@ -1,4 +1,5 @@
 import { world } from "@minecraft/server"
+import { packetIdCharset } from "./Transcoder";
 
 /**
  * Encodes a number to bits as a Varint
@@ -52,4 +53,16 @@ export function decodeVarint(view, index=0) {
  */
 export function sendMsg(id, msg) {
     world.getDimension("minecraft:overworld").runCommand(`scriptevent "${id.replace(/\\/g, "\\\\").replace(/\"/g, "\\\"")}" ${msg}`)
+}
+
+/**
+ * Generates a random id
+ */
+export function randomId(length=12) {
+    const len = packetIdCharset.length;
+    let res = "";
+    for (let i = 0; i < length; i++) {
+        res += packetIdCharset.charAt(Math.floor(Math.random() * 256))
+    }
+    return res;
 }

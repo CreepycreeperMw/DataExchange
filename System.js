@@ -1,12 +1,12 @@
 import { config } from "./config";
 import { DataTypes } from "./DataTypes";
 import { world, system } from "@minecraft/server"
-import { PacketHandle, TypeHandle, listeners } from "./Handle";
-import { TextCoder } from "./Transcoder"
+import { PacketHandle, TypeHandle, listeners, sendPackets } from "./Handle";
+import { Transcoder, packetIdCharset } from "./Transcoder"
 import * as utils from "./utils"
 
-const encoder = TextCoder // Named differently to en/decoder to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
-const decoder = TextCoder // but so that you could technically switch to them or another transcoder down the road
+const encoder = Transcoder // Named differently to en/decoder to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
+const decoder = Transcoder // but so that you could technically switch to them or another transcoder down the road
 
 /* - Loading Cycle -
  Ensure that all addons are loaded and all listeners have been attached before sending any data */
@@ -16,6 +16,7 @@ const decoder = TextCoder // but so that you could technically switch to them or
  *  @type {(()=>void)[]}
  */
 let loadingPromises = []
+let loaded = false // Keeps track of when things are loaded
 
 // Remember the last time a module has loaded
 let lastModuleLoaded = system.currentTick
@@ -27,6 +28,8 @@ const id = system.afterEvents.scriptEventReceive.subscribe(event=>{
 system.runInterval(()=>{
     if(system.currentTick - lastModuleLoaded > config.moduleLoadTimeout) {
         // Modules are considered loaded
+        loaded = true;
+        
         system.afterEvents.scriptEventReceive.unsubscribe(id)
         loadingPromises.forEach(callback=>{
             callback(true)
@@ -47,8 +50,6 @@ let registerStack = {}
 let packetId = 0;
 const maxPacketId = 4294967296
 
-// Charset specifically for the packet ids
-const charset = '!"#$%&\'()*+,-./0123456789;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀŁłŃ';
 // Registry
 system.afterEvents.scriptEventReceive.subscribe(event=>{
     if(event.id=="registry:register") {
@@ -60,7 +61,7 @@ system.afterEvents.scriptEventReceive.subscribe(event=>{
             let view = new DataView(arr.buffer)
             view.setUint32(0, packetId)
             
-            arr.forEach(byte=>{res+=charset.charAt(byte)});
+            arr.forEach(byte=>{res+=packetIdCharset.charAt(byte)});
             
             // Give each type its respective id based on the order Minecraft gave the packets out
             registerQueue.get(event.message).forEach(callback=>callback(res))
@@ -193,7 +194,7 @@ export class System {
      * @returns {Promise<boolean>}
      */
     static async untilLoaded() {
-        if(placeholder) {
+        if(loaded) {
             return Promise.resolve(true)
         } else {
             return new Promise(res=>{
@@ -204,13 +205,24 @@ export class System {
     }
 }
 
+/** @type {{[requestId: string]: string[]}} */
+let multiRequestPackets = {}
 system.afterEvents.scriptEventReceive.subscribe(async (event)=>{
-    const packetId = event.id.replace("packet:","") // optional: .substring
+    const packetHeader = event.id.replace("packet:","") // optional: .substring
+    const [packetId, requestId, orderId] = packetHeader.split("-")
+    if(sendPackets[requestId+(orderId??'')]) return sendPackets[requestId+(orderId??'')](true); // Check if the packet has been send by this addon (the callback is relevant in the future as I want to implement it resending the data incase it got dismissed for some reason, and running that callback tells the code that it got send)
+
     let packetHandle = await System.getType(packetId)
 
     // Decode the data from the string to all their respective data types
-    let uint8arr = encoder.encode(event.message)
+    let uint8arr = decoder.decode(event.message);
     let output = packetHandle.decode(uint8arr);
+
+    // Check if payload is split into multiple payloads
+    if(orderId && orderId != '') {
+        let orderNumber = decoder.decodeId(orderId);
+        if(multiRequestPackets[requestId]) multiRequestPackets[requestId][orderId] = orderNumber;
+    }
 
     listeners[packetId].forEach(listener=>{
         listener(output)
