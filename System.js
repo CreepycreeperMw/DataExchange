@@ -82,28 +82,8 @@ export class System {
         // Only register the types when all Script API scripts are wake
         await this.untilLoaded();
 
-        // This code transfers the type into a string representing its structure, essential in the syncing process
-        let typeArray = []
-
-        let boolAmount = 0
-        Object.keys(packetInfoTypes).forEach((key)=>{
-            const dataType = packetInfoTypes[key]
-            const typeId = typeof dataType === "number" ? builtInDataTypes[dataType].id : dataType.id
-            if(typeId == '' || !typeId) return console.warn("[Illegal Type] reported for "+name+" at index "+key); // Illegal type, skip it
-            
-            if(dataType === DataTypes.Boolean) {
-                // Check if the last bool wouldve been filled by now so that a new one would be needed
-                if(boolAmount % 8 === 0) {
-                    typeArray.push("bool")
-                    boolAmount -= 8
-                }
-            }
-
-            typeArray[key] = typeId // Add the type
-        })
-
         // Data body containing all the necessary information for the packet type
-        const data = name + ' ' + typeArray.join(";")
+        const data = utils.getDataStructString(name, packetInfoTypes, builtInDataTypes)
 
         // Send the register request
         utils.sendMsg("registry:register", data)
@@ -130,28 +110,8 @@ export class System {
         // Only register the packet when all Script API scripts are wake
         await this.untilLoaded();
 
-        // This code transfers the type into a string representing its structure, essential in the syncing process
-        let typeArray = []
-
-        let boolAmount = 0
-        Object.keys(packetInfoTypes).forEach((key)=>{
-            const dataType = packetInfoTypes[key]
-            const typeId = typeof dataType === "number" ? builtInDataTypes[dataType].id : dataType.id
-            if(typeId == '' || !typeId) return console.warn("[Illegal Type] reported for "+name+" at index "+key); // Illegal type, skip it
-            
-            if(dataType === DataTypes.Boolean) {
-                // Check if the last bool wouldve been filled by now so that a new one would be needed
-                if(boolAmount % 8 === 0) {
-                    typeArray.push("bool")
-                    boolAmount -= 8
-                }
-            }
-
-            typeArray[key] = typeId // Add the type
-        })
-
         // Data body containing all the necessary information for the packet type
-        const data = name + ' ' + typeArray.join(";")
+        const data = utils.getDataStructString(name, packetInfoTypes, builtInDataTypes)
 
         // Send the register request
         utils.sendMsg("registry:register", data)
