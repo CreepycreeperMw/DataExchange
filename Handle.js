@@ -19,7 +19,7 @@ export class TypeHandle {
      */
     constructor(name, id, datatypes) {
         datatypes.forEach((dataType,i)=>{ // Validation
-            if(isNaN(dataType) && dataType instanceof TypeHandle) throw "Invalid Datatype recieved. Datatypes must either be a native from the datatypes enum or registered through the Type-/Packethandle API   Argument ["+i+"]"
+            if(isNaN(dataType) && !(dataType instanceof TypeHandle)) throw "Invalid Datatype recieved. Datatypes must either be a native from the datatypes enum or registered through the Type-/Packethandle API   Argument ["+i+"]"
         })
 
         this.name = name;
@@ -173,7 +173,7 @@ export class TypeHandle {
     }
 
     /**
-     * 
+     * Encodes the provided data based on the type's datatype array
      * @param {(boolean | number | string)[]} data 
      * @param {number} [bI=0] Buffer Index, can be used to skip certain elements in the provided data
      * @returns {{ byteArray: Uint8Array, index: number }}
@@ -183,7 +183,14 @@ export class TypeHandle {
         let view = new DataView(arr.buffer)
         let length = arr.byteLength;
 
-        function allMoreIfNeeded(sizeRequired) { // Allocates more bytes if it runs out of them and increases the index
+        /**
+         * Returns the index of the next byte to write and takes in an argument (length)
+         *  which steps the index the next time this function is invoked.
+         * Also makes sure there is always enough space allocated
+         * @param {number} sizeRequired 
+         * @returns 
+         */
+        function index(sizeRequired) { // Allocates more bytes if it runs out of them and increases the index
             // Increase the index
             let oldI = bI;
             bI += sizeRequired;
@@ -204,159 +211,207 @@ export class TypeHandle {
         let latestBoolI = 0; // This keeps track of the byte to store the bool in
         let boolAmount = 0;
 
+        const keys = Object.keys(this.datatypes);
+        const keysLen = keys.length;
         const types = this.datatypes;
-        let skipDataType = false;
         
-        // Loop through each element and encode it
-        for (let key in types) {
-            if(skipDataType) continue;
-            skipDataType = true;
+        // Loop through each element in the right encoding order and encode it
+        for (let kI = 0; kI < keysLen; kI++) {
+            const key = keys[kI];
 
+            // Get the arg and its type
             const dataType = types[key]
             let arg = data[key]
 
-            // Native datatypes internally referenced as a number form, so you can check if its a native type by using isNaN
+            // Native datatypes are internally referenced as a number form, so you can check if its a native type by using isNaN
             if(isNaN(dataType)) {
                 if(!(dataType instanceof TypeHandle)) throw "Error: type is neither a native datatype nor registered!"
 
                 let {byteArray, index: i} = dataType.encode(arg, bI)
                 arr.set(byteArray, bI)
                 bI = i;
-            } else switch (dataType) {
-                case DataTypes.Char:
-                    let value;
-                    if(typeof arg === "string") {
-                        value = decoder.decode(arg[0])[0]
-                    } else if(!isNaN(arg)) {
-                        if(value > 255 || value < 0) throw "Range Error at parameter ["+key+"]. Number must be in range from 0-255"
-                        value = arg;
-                    } else throw "Unexpected argument at parameter ["+key+"]. Expected a (string) char from the charset or a number"
+            } else try {
+                // Some data requires 2 types, e.g. when its an array it requires the type of element of the array. 
+                const nextType = types[keys[++kI]];
 
-                    view.setUint8(value)
-                    break;
-                case DataTypes.Int8:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
+                // native datatypes directly write to the datastream so there is no need to get the byte array and concatenate them
+                let {booleanIndex, newboolAmount, skipNextType} = TypeHandle.encodeNative(
+                    arg, dataType, nextType,// argument info
+                    arr, view, // byte array
+                    index, // index and allocation
+                    latestBoolI, boolAmount // bool info
+                )
 
-                    view.setInt8(allMoreIfNeeded(1), arg)
-                    break;
-                case DataTypes.Int16:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
+                latestBoolI = booleanIndex;
+                boolAmount = newboolAmount;
 
-                    view.setInt16(allMoreIfNeeded(2), arg)
-                    break;
-                case DataTypes.Int32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
-
-                    view.setInt32(allMoreIfNeeded(4), arg)
-                    break;
-                case DataTypes.Float32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
-
-                    view.setFloat32(allMoreIfNeeded(4), arg)
-                    break;
-                case DataTypes.Float64:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
-
-                    view.setFloat64(allMoreIfNeeded(8), arg)
-                    break;
-                case DataTypes.UnsignedInt8:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
-
-                    view.setUint8(allMoreIfNeeded(1), arg)
-                    break;
-                case DataTypes.UnsignedInt16:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
-
-                    view.setUint16(allMoreIfNeeded(2), arg)
-                    break;
-                case DataTypes.UnsignedInt32:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
-
-                    view.setUint32(allMoreIfNeeded(4), arg)
-                    break;
-                case DataTypes.SignedVarInt:
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
-                    arg = (arg << 1) ^ (arg >> 31);
-                case DataTypes.VarInt: {
-                    if(isNaN(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected a number";
-                    
-                    let uint8arr = encodeVarint(arg);
-
-                    arr.set(uint8arr, allMoreIfNeeded(uint8arr.byteLength));
-                    break;
-                }
-                case DataTypes.Boolean:
-                case DataTypes.BooleanGroup:
-                    if(typeof arg !== "boolean") throw "Unexpected argument at parameter ["+key+"]. Expected a boolean";
-
-                    // If the previous bool byte still has more bits for bools use those otherwise allocate new byte
-                    if(boolAmount % 8 === 0) {
-                        latestBoolI = bI;
-                        allMoreIfNeeded(1);
-                        arr[latestBoolI] = 0;
-                    }
-                    
-                    // Set the bit equal to the bool of according byte
-                    let byte = arr[latestBoolI];
-                    if(arg) byte = byte | (1 << boolAmount) // true
-                    else byte = byte & ~(1 << boolAmount) // false
-
-                    boolAmount++;
-                    view.setUint8(latestBoolI, byte);
-                    break;
-                case DataTypes.StringLiteral: {
-                    if(typeof arg !== "string") throw "Unexpected argument at parameter ["+key+"]. Expected a string";
-
-                    // Decode the string to byte array
-                    let encodedString = Transcoder.unicodeDecode(arg)
-                    
-                    // Calculate length and add it as a var int
-                    const length = encodedString.byteLength;
-                    const encodedLengthNum = encodeVarint(length);
-
-                    arr.set(encodedLengthNum, allMoreIfNeeded(encodedLengthNum.byteLength)) // Add the string length
-                    arr.set(encodedString, allMoreIfNeeded(length)) // Add the string data
-                    break;
-                }
-                case DataTypes.Array: {
-                    if(!Array.isArray(arg)) throw "Unexpected argument at parameter ["+key+"]. Expected an array";
-                    
-                    // Length
-                    const length = arg.length;
-                    const encodedLengthNum = encodeVarint(length);
-
-                    // Append the length varint and make sure there is space
-                    arr.set(encodedLengthNum, allMoreIfNeeded(encodedLengthNum.byteLength))
-
-                    // Encode the arrays children
-                    const dataType = this.datatypes[key]
-                    for (let childI = 0; bI < length; childI++) {
-                        const {byteArray: encodedData, index: nextI} = dataType.encode(arg, bI);
-                        
-                        // Allocate the size needed for this byte size and add the elements data to the bytearray
-                        arr.set(encodedData, allMoreIfNeeded(nextI - bI))
-                    }
-
-                    continue;
-                }
-                case DataTypes.ByteArray: {
-                    if(!(arg instanceof Uint8Array)) throw "Unexpected argument at parameter ["+key+"]. Expected an Uint8Array";
-
-                    // Length
-                    const length = arg.byteLength;
-                    const encodedLengthNum = encodeVarint(length);
-
-                    arr.set(encodedLengthNum, allMoreIfNeeded(encodedLengthNum.byteLength))
-                    arr.set(arg, allMoreIfNeeded(length))
-                    break;
-                }
-                case DataTypes.Unsigned:
-                    break; // just continue, this datatype should never actually occur as is as a type, so this is just a fallback
+                if(skipNextType) kI++;
+            } catch(err) {
+                throw `${err} ${this.name} at parameter ${key}`
             }
-
-            skipDataType = false;
         }
         return { byteArray: arr, index: bI };
+    }
+
+    /**
+     * Encodes native datatypes
+     * @param {(boolean | number | string)[]} arg The argument to encode
+     * @param {number} dataType The datatype to encode the argument to
+     * @param {DataTypes | TypeHandle} extraType The next type for types like Array, who require an datatype for their children
+     * @param {Uint8Array} byteArray The byteArray
+     * @param {DataView} view A dataview of the byteArray
+     * @param {(length: number)=>number} index Returns the index of the next byte to write and
+     * takes in an argument (length) which steps the index the next time this function is invoked.
+     * Also makes sure there is always enough space allocated
+     * @param {number} latestBoolI The index of the last bool byte to keep track of where to put the bools
+     * @param {number} boolAmount The amount of bools stored in the latest bool byte so it can allocate a new one if needed
+     */
+    static encodeNative(arg, dataType, extraType, byteArray, view, index, latestBoolI, boolAmount) {
+        switch (dataType) {
+            case DataTypes.Char:
+                let value;
+                if(typeof arg === "string") {
+                    value = decoder.decode(arg[0])[0]
+                } else if(!isNaN(arg)) {
+                    if(value > 255 || value < 0) throw "Range Error, number must be in range from 0-255"
+                    value = arg;
+                } else throw "Unexpected argument, expected a (string) char from the charset or a number"
+
+                view.setUint8(value)
+                break;
+            case DataTypes.Int8:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+
+                view.setInt8(index(1), arg)
+                break;
+            case DataTypes.Int16:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+
+                view.setInt16(index(2), arg)
+                break;
+            case DataTypes.Int32:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+
+                view.setInt32(index(4), arg)
+                break;
+            case DataTypes.Float32:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+
+                view.setFloat32(index(4), arg)
+                break;
+            case DataTypes.Float64:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+
+                view.setFloat64(index(8), arg)
+                break;
+            case DataTypes.UnsignedInt8:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+
+                view.setUint8(index(1), arg)
+                break;
+            case DataTypes.UnsignedInt16:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+
+                view.setUint16(index(2), arg)
+                break;
+            case DataTypes.UnsignedInt32:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+
+                view.setUint32(index(4), arg)
+                break;
+            case DataTypes.SignedVarInt:
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                arg = (arg << 1) ^ (arg >> 31);
+            case DataTypes.VarInt: {
+                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                
+                let uint8arr = encodeVarint(arg);
+
+                byteArray.set(uint8arr, index(uint8arr.byteLength));
+                break;
+            }
+            case DataTypes.Boolean:
+            case DataTypes.BooleanGroup:
+                if(typeof arg !== "boolean") throw "Unexpected argument, expected a boolean";
+
+                // If the previous bool byte still has more bits for bools use those otherwise allocate new byte
+                if(boolAmount % 8 === 0) {
+                    latestBoolI = index(1);
+
+                    byteArray[latestBoolI] = 0;
+                }
+                
+                // Set the bit equal to the bool of according byte
+                let byte = byteArray[latestBoolI];
+                if(arg) byte = byte | (1 << boolAmount) // true
+                else byte = byte & ~(1 << boolAmount) // false
+
+                boolAmount++;
+                view.setUint8(latestBoolI, byte);
+                break;
+            case DataTypes.StringLiteral: {
+                if(typeof arg !== "string") throw "Unexpected argument, expected a string";
+
+                // Decode the string to byte array
+                let encodedString = Transcoder.unicodeDecode(arg)
+                
+                // Calculate length and add it as a var int
+                const length = encodedString.byteLength;
+                const encodedLengthNum = encodeVarint(length);
+
+                byteArray.set(encodedLengthNum, index(encodedLengthNum.byteLength)) // Add the string length
+                byteArray.set(encodedString, index(length)) // Add the string data
+                break;
+            }
+            case DataTypes.Array: {
+                if(!Array.isArray(arg)) throw "Unexpected argument, expected an array";
+                
+                // Length
+                const length = arg.length;
+                const encodedLengthNum = encodeVarint(length);
+
+                // Append the length varint and make sure there is space
+                byteArray.set(encodedLengthNum, index(encodedLengthNum.byteLength))
+
+                // Encode the arrays children
+                if(isNaN(extraType)) { // custom datatype
+                    if(!(extraType instanceof TypeHandle)) throw "Error: Invalid Datatype received, type is neither a native datatype nor registered!"
+
+                    for (let childI = 0; childI < length; childI++) {
+                        const {byteArray: encodedData, index: len} = extraType.encode(arg[childI]);
+    
+                        // Allocate the size needed for this byte size and add the elements data to the bytearray
+                        byteArray.set(encodedData, index(len))
+                    }
+                } else { // native datatype
+                    if(extraType === DataTypes.Array) throw "Array of type array found. If you want to nest arrays you need to register another type that holds an array."
+                    
+                    for (let childI = 0; childI < length; childI++) {
+                        // native datatypes directly write to the datastream so there is no need to get the byte array and concatenate them
+                        const {booleanIndex, newBoolAmount} = this.encodeNative(arg, extraType, null, byteArray, view, index, latestBoolI, boolAmount)
+                        latestBoolI = booleanIndex;
+                        boolAmount = newBoolAmount;
+                    }
+                }
+
+                return {booleanIndex: latestBoolI, newBoolAmount: boolAmount, skipNextType: true}
+            }
+            case DataTypes.ByteArray: {
+                if(!(arg instanceof Uint8Array)) throw "Unexpected argument, expected an Uint8Array";
+
+                // Length
+                const length = arg.byteLength;
+                const encodedLengthNum = encodeVarint(length);
+
+                byteArray.set(encodedLengthNum, index(encodedLengthNum.byteLength))
+                byteArray.set(arg, index(length))
+                break;
+            }
+            case DataTypes.Unsigned:
+            default:
+                break; // just continue, this datatype should never actually occur as a type, so this is just a fallback
+        }
+        return {booleanIndex: latestBoolI, newBoolAmount: boolAmount, skipNextType: false}
     }
 }
 
@@ -382,7 +437,7 @@ export class PacketHandle extends TypeHandle {
      */
     send(...data) {
         // Encode the data arguments to binary
-        const {byteArray, index} = data.length > 1 ? this.encode(data) : this.encode(data[0])
+        const {byteArray, index} = this.encode(data)
         const payload = encoder.encode(byteArray, index) // Convert the binary byte array to strings
 
         const requestId = randomId(12);
@@ -393,7 +448,6 @@ export class PacketHandle extends TypeHandle {
             let portionCountDec = length / config.maxMessageSize;
             let portionCount = Math.floor(portionCountDec)
             if(portionCount != portionCountDec) portionCount++; // This is for the rest result which isnt an entire portion
-            if(portionCount > 255) throw "Packet length too long! You cannot send this much data at once."
 
             for (let i = 0; i < portionCount; i++) {
                 /* The orderNumber is the reverse number of the order they were decoded in.

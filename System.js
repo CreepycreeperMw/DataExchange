@@ -196,12 +196,12 @@ export class System {
             await System.registerType('int8', []),
             await System.registerType('int16', []),
             await System.registerType('int32', []),
-            await System.registerType('varint', []),
+            await System.registerType('svarint', []),
             '', // this is the unsigned enum member
             await System.registerType('uint8', []),
             await System.registerType('uint16', []),
             await System.registerType('uint32', []),
-            await System.registerType('uvarint', []),
+            await System.registerType('varint', []),
         
             await System.registerType('float32', []),
             await System.registerType('float64', []),
@@ -209,7 +209,7 @@ export class System {
             await System.registerType('string', []),
             await System.registerType('boolgroup', []),
             await System.registerType('array', []),
-            await System.registerType('bigarray', []),
+            await System.registerType('bytearray', []),
         ];
         return builtInDataTypes;
     }

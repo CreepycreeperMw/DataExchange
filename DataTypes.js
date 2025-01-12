@@ -4,16 +4,19 @@ export const DataTypes = {
     Int16: 2,
     Int32: 3,
     SignedVarInt: 4,
+
     Unsigned: 5,
     UnsignedInt8: 6,
     UnsignedInt16: 7,
     UnsignedInt32: 8,
     VarInt: 9,
+
     Float32: 10,
     Float64: 11,
     Boolean: 12,
     BooleanGroup: 12,
     StringLiteral: 13,
+    
     ByteArray: 14,
     Array: 15,
 }
