@@ -69,8 +69,6 @@ system.afterEvents.scriptEventReceive.subscribe(event=>{
         }
     }
 }, {namespaces:["registry"]})
-
-// Declaration of the built-in datatype array (internally used)
 export let builtInDataTypes;
 export class System {
     /**
@@ -186,11 +184,11 @@ export class System {
     }
 
     /**
-     * Haults the process until the 
+     * Haults the process if the native datatypes are not fully registered yet
+     * and returns the native datatypes
      * @returns {Promise<TypeHandle[]>}
      */
     static async getNativeTypes() {
-        // This registers the native types through the same api so that they always get a unique id. Ensures that types dont break across versions
         if(!builtInDataTypes) builtInDataTypes = [
             await System.registerType('ch', []),
             await System.registerType('int8', []),
@@ -220,25 +218,47 @@ await System.getNativeTypes(); // Registers the native types and keeps any exter
 /** @type {{[requestId: string]: string[]}} */
 let multiRequestPackets = {}
 system.afterEvents.scriptEventReceive.subscribe(async (event)=>{
-    const packetHeader = event.id.replace("packet:","") // optional: .substring
+    const packetHeader = event.id.replace("packet:","")
     const [packetId, requestId, orderId] = packetHeader.split("-")
+    
     if(sendPackets[requestId+(orderId??'')]) return sendPackets[requestId+(orderId??'')](true); // Check if the packet has been send by this addon (the callback is relevant in the future as I want to implement it resending the data incase it got dismissed for some reason, and running that callback tells the code that it got send)
+    if(!listeners[packetId]) return; // return if there are no listeners registered for this packet
 
-    let packetHandle = await System.getType(packetId);
-
-    // Decode the data from the string to all their respective data types
-    let uint8arr = decoder.decode(event.message, 1, event.message.length-1); // Get everything between the ""
-    let output = packetHandle.decode(uint8arr).decodedParameters;
+    let payload = '';
 
     // Check if payload is split into multiple payloads
     if(orderId && orderId != '') {
         let orderNumber = decoder.decodeId(orderId);
-        if(multiRequestPackets[requestId]) multiRequestPackets[requestId][orderId] = orderNumber;
+        
+        // Add the payload to the stack
+        const stack = multiRequestPackets[requestId];
+        if(stack) stack[orderNumber] = event.message.substring(1, event.message.length-1)
+        else { multiRequestPackets[requestId] = [ orderNumber ]; return }
+
+        // Get the stack of all the payload pieces
+        const len = stack.length
+
+        // Check if all the payload pieces have been collected
+        for (let i = 0; i < len; i++) if(!stack[i]) return; // Because the orderId is descending when we loop we first check the elements that are added last so we dont waste time on looping over huge stacks
+
+        // Concatenate all the payload pieces
+        for (let i = len - 1; i > 0; i--) {
+            payload += stack[i];
+        }
+    } else {
+        payload = event.message.substring(1, event.message.length-1) // Get everything between the ""
     }
+
+    let packetHandle = await System.getType(packetId);
+
+    // Decode the data from the string to all their respective data types
+    let uint8arr = decoder.decode(payload);
+    let output = packetHandle.decode(uint8arr).decodedParameters;
 
     listeners[packetId].forEach(listener=>{
         listener(output)
     })
 }, {namespaces: ["packet"]})
 
+// This registers the native types through the same api so that they always get a unique id. Ensures that types dont break across versions
 export default builtInDataTypes;

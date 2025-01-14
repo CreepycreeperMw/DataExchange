@@ -18,7 +18,6 @@ export class Transcoder {
      */
     static encode(bytes, end) {
         let res = "";
-        // bytes.forEach(byte=>res+=charset.charAt(byte));
 
         const endD = end ?? bytes.byteLength;
         for (let i = 0; i < endD; i++) {

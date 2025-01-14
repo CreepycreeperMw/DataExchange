@@ -22,10 +22,11 @@ export const config = {
     defaultEncodingBufferSize: 1024,
     /**
      * Max size per payload that minecraft can handle
+     * Note: Remove 2 for the quotes sorounding the payload
      */
-    maxMessageSize: 2048,
+    maxMessageSize: 2046,
     /**
-     * Maximum amount of tries to send the request before it gives
+     * Maximum amount of tries to send the request before it gives up
      */
     maxSendTries: 3,
 }
