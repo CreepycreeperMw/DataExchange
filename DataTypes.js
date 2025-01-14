@@ -367,8 +367,6 @@ export const DataTypes = {
     
                     for (let childI = 0; childI < length; childI++) {
                         let passedArg = arg[childI];
-                        if(!Array.isArray(passedArg)) passedArg = [ passedArg ]; // If the Array's type is a custom data type which only holds 1 member and you forgot to put the arguments of the custom data type in [] then this does it for you
-
                         const {byteArray: encodedData, index: len} = extraType.encode(passedArg);
                         
                         // Allocate the size needed for this byte size and add the elements data to the bytearray
