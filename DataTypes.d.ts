@@ -24,8 +24,8 @@ export enum DataTypes {
     Float64 = 11,
 
     // Miscellanious
-    Boolean = 12, // X000-0000
-    BooleanGroup = 12, // ABCD-EFGH  |  Each bit is a bool value. If there are multiple bool values the system will automatically make it to a bool group // EDIT: Gave both values the same num as their impl can be identical
+    Boolean = 12, // 0000-000X
+    BooleanGroup = 12, // HGFE-DCBA  |  Each bit is a bool value. If there are multiple bool values the system will automatically make it to a bool group // EDIT: Gave both values the same num as their impl can be identical
     StringLiteral = 13, // XXXX-XXXX XXXX-XXXX ...CCCC CCCC  |  X = 16 bit length indicator int, C = Character byte
 
     // Lists

@@ -16,21 +16,25 @@ export const DataTypes = {
     Char: 0,
     /** 
      * An 8-bit signed Integer
+     * Range -128 to 127
      * @readonly
      */
     Int8: 1,
     /** 
      * An 16-bit signed Integer
+     * Range -32768 to 32767
      * @readonly
      */
     Int16: 2,
     /** 
      * An 32-bit signed Integer
+     * Range -2,147,483,648 to 2,147,483,647
      * @readonly
      */
     Int32: 3,
     /** 
      * A signed varint
+     * Supports negative value, dynamic range
      * @readonly
      */
     SignedVarInt: 4,
@@ -41,31 +45,37 @@ export const DataTypes = {
     Unsigned: 5,
     /** 
      * An unsigned 8-bit Integer
+     * Range 0 - 255
      * @readonly
      */
     UnsignedInt8: 6,
     /** 
      * An unsigned 16-bit Integer
+     * Range 0 - 65535
      * @readonly
      */
     UnsignedInt16: 7,
     /** 
      * An unsigned 32-bit Integer
+     * Range 0 - 4,294,967,295
      * @readonly
      */
     UnsignedInt32: 8,
     /** 
      * An (unsigned) varint
+     * Dynamic range, does not support negative values
      * @readonly
      */
     VarInt: 9,
     /** 
      * A 32-bit float
+     * Supports decimal and negative numbers, has a wide range, lacks precision for really complex numbers
      * @readonly
      */
     Float32: 10,
     /** 
      * A 64-bit float
+     * Supports decimal and negative numbers and has a wider range, even better precision than float32
      * @readonly
      */
     Float64: 11,

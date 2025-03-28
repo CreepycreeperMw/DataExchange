@@ -1,6 +1,12 @@
 # Q & A
 This file aims to explain some principles and questions as simple and indepth as possible without using any shortnames that might be hard to understand
 
+## Whats the data string?
+The datastring is used in the registration process and is a string representation of the type you want to register. <br>
+It holds the **name** and the ids of the **types** that this type holds joined together by a `;`.
+This is used to reckognize the packet across addons.
+The name and types are split by space.
+
 ## Why are Packet names not namespaced?
 I can imagine not using namespaces can seem like quite a risky move but I think namespaces have many strings of problems or complications attached to them,
 mainly because they do not describe the connection between addons but rather the addon itself that is trying to communicate to or from. <br>
@@ -16,4 +22,3 @@ The problem is that in order to do something like this you need everyone to foll
 After all this is nothing that cant be resolved by human communication but this is an example of how namespacing the packets can create quite the complex problems down the road.
 And at last you can still prepend your Packet names with whatever you want theres no one stopping you from doing that, but this leaves the choice up to you as oppose to building
 another requirement that might cause more bad than good.
-

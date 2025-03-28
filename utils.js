@@ -66,7 +66,6 @@ export function sendMsg(id, msg) {
  * Generates a random id
  */
 export function randomId(length=12) {
-    const len = packetIdCharset.length;
     let res = "";
     for (let i = 0; i < length; i++) {
         res += packetIdCharset.charAt(Math.floor(Math.random() * 256))

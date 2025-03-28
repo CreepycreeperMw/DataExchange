@@ -1,18 +1,19 @@
-# Packet-based Crosspack Communication
-This is a new approach to pack communication aimed to be easy to use while being advanced in terms of efficiency and performance.
+# MDEX
+MDEX is a new approach to pack communication aimed to be easy to use while being advanced in terms of efficiency and performance.
 
-Now before I get into the juicy details I want to differentiate between the *Protocol* and the *Implementation* that power this System.
+Now before I get into the details I want to differentiate between the *Protocol* and the *Implementation* that back this System.
 The goal was to move as much load as possible onto the API instead of the protocol so that the protocol can stay rather simple,
-while you can enjoy a feature rich, easy to use and fast system but also allowing you to *easily get started without the library* writing
-your own approach.
+while you can enjoy a feature rich, easy to use and fast system but also allowing you to *easily get started without the library* [writing your own approach](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#Protocol).
 
 ###### (All of the requirements of the protocol are listed [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications))
+
+**If you're looking to [get started with the API](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#api) or you want to [implement the protocol](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#protocol) yourself, look [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md)**
 
 The central question this system revolves around is **How can I make a system that makes it as *simple as possible* for other addon creators to create a compatible data interchange, while being incredibly *efficient* __and__ with *good performance?*** <br>
 The following article aims to explain on how this system looks, some of the concepts it uses and how it works under the hood
 <br>
 
-**Incase you're just peeking here is some quick code that demonstrates on how to use the API**
+### Demos
 
 To register a Type with the API you simply call [System::registerType()](https://github.com/CreepycreeperMw/DataExchange/blob/main/System.d.ts#L12)
 and provide a name with an array of types that make up your data structure<br>
@@ -103,7 +104,7 @@ But that doesnt quite magically make Addons compatible does it?
 Now the idea of having certain channels to communicate on and possibly have complex requirements to build a connection with another is cool but it didnt quite catch me yet, as the 2 (or more) Addons are already in a closed system in an trusted enviroment, and there is no need for fancy encryption or complex handshake magic going on.
 In my opinion this really just makes it harder for addons to be compatible with another, because it leaves more room for people to have their own opinion, use their own channel, own namespace etc. and also makes it harder for people , which I'm trying to avoid
 
-Instead each Packet type has its own id, but this id is not decided by the user as that would kind of leave us where we started
+Instead each Packet type has its own id, but this id is not decided by the user as that would kind of leave us where we started <br>
 The system dumps all of the registration requests right when the addons are loaded & because Minecraft now acts as this kind of server and middle man,
 it always gives the registration requests in the order in which it received it which this system makes use of by incrementing a number for each packet request that comes through and assigning that number to each packet type.
 
@@ -181,11 +182,11 @@ ExperimentsPacket.send({
 ### Packet Request
 For actually sending the packet you will need the `packetId`,
 followed by the `requestId` and optionally followed by an `orderId` incase. These are seperated by a dash (`-`) and they cannot include characters outside the `packetIdCharset`
-- the **requestId** must be __unique__ and is used
+- the `requestId` must be __unique__ and is used
     1. to know which packets have been send by the system themself and to confirm that they have been send
     2. for large packet bodies to know what parts belong together because they get split into to multiple requests (see orderId)
 in the implementation they are 12 characters long but it would also work with other lengths
-- the protocol supports request splitting if the payload is too large for one Minecraft scriptevent message (max is 2048 chars). The **orderId** specifies which element it is in descending order, so that 0 is always the last element and we dont have to add an additional bool to know wether its the last element
+- the protocol supports request splitting if the payload is too large for one Minecraft scriptevent message (max is 2048 chars). The `orderId` specifies which element it is in descending order, so that 0 is always the last element and we dont have to add an additional bool to know wether its the last element
 The body which contains the payload is wrapped in quotes
 Read more about the encoding of the body [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications.md#encoding)
 
