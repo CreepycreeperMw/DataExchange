@@ -4,33 +4,85 @@ import { PacketHandle, TypeHandle } from "./Handle";
  * This Enumeration represents all the default types that are implemented in the protocol
  */
 export enum DataTypes {
-    // Base Type: Byte / Char
-    Char = 0, // XXXX-XXXX
-
-    // Signed Numbers
+    /** 
+     * A one byte character.
+     * Note : Only supports characters from the charset. If you need complex utf characters use strings.
+     */
+    Char = 0,
+    /** 
+     * An 8-bit signed Integer
+     * Range -128 to 127
+     */
     Int8 = 1,
+    /** 
+     * An 16-bit signed Integer
+     * Range -32768 to 32767
+     */
     Int16 = 2,
+    /** 
+     * An 32-bit signed Integer
+     * Range -2,147,483,648 to 2,147,483,647
+     */
     Int32 = 3,
+    /** 
+     * A signed varint
+     * Supports negative value, dynamic range
+     */
     SignedVarInt = 4,
-    
-    // Unsigned Numbers
+    /** 
+     * Unsigned modifier. Add this to any signed type to make it unsigned.
+     */
     Unsigned = 5,
+    /** 
+     * An unsigned 8-bit Integer
+     * Range 0 - 255
+     */
     UnsignedInt8 = 6,
+    /** 
+     * An unsigned 16-bit Integer
+     * Range 0 - 65535
+     */
     UnsignedInt16 = 7,
+    /** 
+     * An unsigned 32-bit Integer
+     * Range 0 - 4,294,967,295
+     */
     UnsignedInt32 = 8,
-    VarInt = 9, // XXXX-XXXC
-
+    /** 
+     * An (unsigned) varint
+     * Dynamic range, does not support negative values
+     */
+    VarInt = 9,
+    /** 
+     * A 32-bit float
+     * Supports decimal and negative numbers, has a wide range, lacks precision for really complex numbers
+     */
     Float32 = 10,
+    /** 
+     * A 64-bit float
+     * Supports decimal and negative numbers and has a wider range, even better precision than float32
+     */
     Float64 = 11,
-
-    // Miscellanious
-    Boolean = 12, // 0000-000X
-    BooleanGroup = 12, // HGFE-DCBA  |  Each bit is a bool value. If there are multiple bool values the system will automatically make it to a bool group // EDIT: Gave both values the same num as their impl can be identical
-    StringLiteral = 13, // XXXX-XXXX XXXX-XXXX ...CCCC CCCC  |  X = 16 bit length indicator int, C = Character byte
-
-    // Lists
-    ByteArray = 14, // XXXX-XXXX CCCC-CCCC[?]  |  X = 8 bit integer element length declaration, C = Raw Byte data
-    Array = 15, // <VARINT> C[?]  |  Prefixed by a varint indicating the length of the array, C = Bits of the respective data type
+    /** 
+     * A boolean
+     */
+    Boolean = 12,
+    /** 
+     * A boolgroup, merges multiple booleans into one bool, currently same functionality as boolean
+     */
+    BooleanGroup = 12,
+    /** 
+     * String, supports all Unicode Characters and has a dynamic length
+     */
+    StringLiteral = 13,
+    /** 
+     * Array of bytes, usually decoded as an unsigned 8-bit integer
+     */
+    ByteArray = 14,
+    /** 
+     * Array of any other type. Prepend this type by the type you want the array to have.
+     */
+    Array = 15
 }
 
 type DataType = DataTypes | TypeHandle | PacketHandle;

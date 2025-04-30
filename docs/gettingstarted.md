@@ -5,7 +5,7 @@ If you're looking to get into how to use the API start [here](#api)! <br>
 If you want to implement the protocol yourself you may start [here](#protocol)
 
 ## API
-### Installing the API
+### 1. Installing the API
 First you need to [download the Library]() in order to embed it into your code. After you did that, just drop the main folder into your scripts folder and you're good to go.
 
 Then you need to import the Library from the local path, in my case my script is sitting inside the `scripts` folder and the System is sitting in `scripts/DataExchange` folder in which you'll find the `System.js` and `DataTypes.js` modules.
@@ -14,7 +14,8 @@ import { DataTypes } from "./DataExchange/DataTypes";
 import { System } from "./DataExchange/System";
 ```
 ---
-### Registering a Packet
+
+### 2. Registering a Packet
 Now before doing anything with your Packets you first need to register them to the System, so that the API knows how to serialize your Datatype and so that other Addons can sync up their types with yours.
 
 <!-- To do this you need to use the System.registerType and System.registerPacket respectively. -->
@@ -26,7 +27,7 @@ In this example we register a type called "SimpleTest" and specify that it holds
 The `registerPacket` method returns an `PacketHandle` which you can store in a variable (like MyCustomPacket), we'll need this later on.
 
 ---
-### Sending a Packet
+### 3. Sending a Packet
 To send a packet now, use the `.send()` method on the `PacketHandle` that the System.registerPacket method returned
 ```js
 MyCustomPacket.send(["I just send my first packet!"])
@@ -34,7 +35,7 @@ MyCustomPacket.send(["I just send my first packet!"])
 This will send the 'SimpleTest' Packet with the string of "I just send my first packet!".
 
 ---
-### Listening for a Packet
+### 4. Listening for a Packet
 Now to receive a Packet its a similar game, you need to call the `.listen` method on your `PacketHandle` and pass a callback which will be your event listener.
 ```js
 MyCustomPacket.listen(output=>{
@@ -43,7 +44,7 @@ MyCustomPacket.listen(output=>{
 })
 ```
 ---
-### Naming the properties
+### 5. Naming the properties
 Now as you can see we previously used an array to define all the datatypes we need, but this can get a bit messy for complexer types as we dont really know what each datatype is for. <br>
 You can also register a type by giving the register method an object instead of an array
 ```js
@@ -57,7 +58,7 @@ Under the hood this works the same as if you just gave it an array, but your out
 the keys you give it only exist in the API. However if you provide the properties in a wrong order **in the send method** the System will still encode your properties in the right order, so no worries about that, only the registry has to be correct.
 
 ---
-### The Datatypes Enum
+### 6. The Datatypes Enum
 The `DataTypes` Enumeration holds all native datatypes in this API that you can use. <br>
 It includes things like `Strings` (DataTypes.StringLiteral),
 `Booleans` for true/false (DataTypes.Boolean),
@@ -90,7 +91,7 @@ If you're unsure about the differences with these number types you can also read
 </details>
 
 ---
-### Building complex types
+### 7. Building complex types
 Now you may want to build more complex packets than a Packet with just one string, and now that you're aware what each type does (look above) its time to start building some complexer types.
 ```js
 // Types
@@ -254,7 +255,7 @@ Now back in index.js you can now convert the packetId to bytes and then to strin
 Though, because this includes the registration listener, we should actually put this code above our loading sequence so that when loading finishes we dont miss early requests coming through while we're still subscribing to scriptevent
 > Incase you dont want to go through the middlestep of converting the id to bytes, I also wrote a small function that converts numbers like that straight to strings [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/Transcoder.js#L39), but if you use this, make sure to add padding to the result string with `.paddingStart(8, packetIdCharset[0])` in order to fill in the bytes that are 0
 
-5. Now we create a simple register function that generates the datastring and sends it off and then returns the id of the packet. [Datastring](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/qanda.md#whats-the-data-string)
+5. Now we create a simple register function that generates the [datastring](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/qanda.md#whats-the-data-string) and sends it off and then returns the id of the packet. 
 ```js
 async function register(name, types) {
     if(registerStack[name]) throw new Error("You already registeredt this "+name)
@@ -271,10 +272,10 @@ Like previously mentioned, this uses the same technique we used at the start, pa
 
 > Good job! You've got the biggest part done :) Take a quick breath, a break or continue right away below
 
-Now that we have all our registration logic done, we can implement the native types. By protocol, these types are also just normal types registered through the system so the code to get this working is pretty simple:
+6. Now that we have all our registration logic done, we can implement the native types. By protocol, these types are also just normal types registered through the system so the code to get this working is pretty simple:
 ```js
 // native datatypes
 let natives = ['ch','int8','int16','int32','svarint','uint8','uint16','uint32','varint','float32','float64','bool','string','array']
-for (const type in natives) register(type, []);
+for (const type in natives) register(type, []); // you provide no types because its a base type
 ```
 We just create an array of native types and loop over it, because they're native they dont actually have an type array, so we can just pass an empty array for the types.
