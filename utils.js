@@ -90,13 +90,16 @@ export function getDataStructString(name, packetInfoTypes, builtInDataTypes) {
         const dataType = packetInfoTypes[key]
         const typeId = typeof dataType === "number" ? builtInDataTypes[dataType].id : dataType.id
         if(typeId == '' || !typeId) return console.warn("[Illegal Type] reported for "+name+" at index "+key); // Illegal type, skip it
-        
+
         if(dataType === DataTypes.Boolean) {
             // Check if the last bool wouldve been filled by now so that a new one would be needed
             if(boolAmount % 8 === 0) {
                 typeArray.push(typeId)
                 boolAmount -= 8
             }
+        } else if (dataType instanceof DataTypes.Array) {
+            typeArray.push(DataTypes.Array)
+            typeArray.push(dataType.elementType)
         } else typeArray.push(typeId) // Add the type
     })
     return name + ' ' + typeArray.join(';')

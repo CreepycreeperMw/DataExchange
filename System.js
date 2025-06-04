@@ -124,8 +124,8 @@ export class System {
             else registerQueue.get(data).push(res)
 
             system.runTimeout(()=>{
-                rej("Fatal error") // When the type seems to not be registered, throw an error after a certain amount of time
-            }, 1000)
+                rej("Fatal error") // When the type seems to not be registered,
+            }, 1000)               // throw an error after a certain amount of time
         })
 
         const handle = new PacketHandle(name, typeId, packetInfoTypes)

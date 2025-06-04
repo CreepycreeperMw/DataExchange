@@ -116,4 +116,5 @@ namespace DataTypes {
      * @returns An object detailing wether the extra datatype was 'consumed', the index of the last allocated byte for a boolean and the amount of booleans currently stored in that byte
      */
     export function encodeNative(arg: (boolean | number | string)[], dataType: DataTypes, extraType: DataTypes | TypeHandle, byteArray: Uint8Array, view: DataView, index: (length: number) => number, latestBoolI: number, boolAmount: number): { skipNextType: boolean, booleanIndex: number, newBoolAmount: number }
+    export function ArrayOf(elementType: DataType): DataType
 }

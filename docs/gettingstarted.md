@@ -157,7 +157,8 @@ fullfill everything that is needed to make this protocol work. Of course this wi
 To keep this a little bit organized, we'll keep all our code in 2 files
 `index.js` and `utils.js` which we will use to drop in handy functions etc.
 
-1. First up, lets start by creating a simple sendMsg() function in our utils file so we dont have to call the APIs to send a scriptevent everytime.
+---
+**1.** First up, lets start by creating a simple sendMsg() function in our utils file so we dont have to call the APIs to send a scriptevent everytime.
 
 `util.js`
 ```js
@@ -172,7 +173,8 @@ For simplicity sake we used `await null;` to gain access to the "required privil
 Then we defined a simple function that takes in an ID and a Message and properly escapes the quotes and backslashes in the ids, since because we are using runCommand, these would otherwise cause an error if we used them in the id.
 You also need to put quotes around the id since the CommandArg parser of the id in the command may exit parsing early for certain special characters
 
-2. Now lets continue by implementating the loading protocol.
+---
+**2.** Now lets continue by implementating the loading protocol.
 The loading protocol requires you to send a "register:loaded" request and then wait until no more "register:loaded" requests are coming through. This is when all addon packs are considered loaded.
 
 `index.js`
@@ -188,7 +190,8 @@ system.clearRun(temp) // stop the loading loop as its no longer needed
 Here we make use of a neat technique which we'll use more times throughout this tutorial: <br>
 We make a top level variable and create a Promise and then put the resolve function of that promise in the top level variable, so we can use it in other methods and functions and resolve the method from anywhere in the code.
 
-3. After that we need the core part of this protocol, the ***registry*** which automatically assigns the ids to the packet based on this protocol
+---
+**3.** After that we need the core part of this protocol, the ***registry*** which automatically assigns the ids to the packet based on this protocol
 
 First we'll create 3 variables: ___a register stack___ in which all the packets that have been registered are stored, of which the key is the name of the packet stored and the value is its id, then a ___queue___ for all packets that are currently waiting to get their id and the next ___packetId___ to be assigned
 ```js
@@ -217,7 +220,8 @@ system.afterEvents.scriptEventReceive.subscribe(event=>{
 ```
 Now you might have noticed that I have left out the encoding of the id, because for that we'll first need a proper encoder!
 
-4. To implement the encoder properly we first need to define our charsets in utils.js
+---
+**4.** To implement the encoder properly we first need to define our charsets in utils.js
 
 `utils.js`
 ```js
@@ -255,7 +259,8 @@ Now back in index.js you can now convert the packetId to bytes and then to strin
 Though, because this includes the registration listener, we should actually put this code above our loading sequence so that when loading finishes we dont miss early requests coming through while we're still subscribing to scriptevent
 > Incase you dont want to go through the middlestep of converting the id to bytes, I also wrote a small function that converts numbers like that straight to strings [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/Transcoder.js#L39), but if you use this, make sure to add padding to the result string with `.paddingStart(8, packetIdCharset[0])` in order to fill in the bytes that are 0
 
-5. Now we create a simple register function that generates the [datastring](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/qanda.md#whats-the-data-string) and sends it off and then returns the id of the packet. 
+---
+**5.** Now we create a simple register function that generates the [datastring](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/qanda.md#whats-the-data-string) and sends it off and then returns the id of the packet. 
 ```js
 async function register(name, types) {
     if(registerStack[name]) throw new Error("You already registeredt this "+name)
@@ -272,7 +277,8 @@ Like previously mentioned, this uses the same technique we used at the start, pa
 
 > Good job! You've got the biggest part done :) Take a quick breath, a break or continue right away below
 
-6. Now that we have all our registration logic done, we can implement the native types. By protocol, these types are also just normal types registered through the system so the code to get this working is pretty simple:
+---
+**6.** Now that we have all our registration logic done, we can implement the native types. By protocol, these types are also just normal types registered through the system so the code to get this working is pretty simple:
 ```js
 // native datatypes
 let natives = ['ch','int8','int16','int32','svarint','uint8','uint16','uint32','varint','float32','float64','bool','string','array']

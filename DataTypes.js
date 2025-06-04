@@ -103,7 +103,29 @@ export const DataTypes = {
      * Array of any other type. Prepend this type by the type you want the array to have.
      * @readonly
      */
-    Array: 15,
+    Array: class GenericArrayDataType {
+        constructor(elementType) {
+            this.elementType = elementType
+        }
+
+        toString() {
+            return "15"
+        }
+
+        get id() {
+            return 15
+        }
+    },
+
+    /**
+     * Make an Array of any other type.
+     * Accepts one argument to dictate the type of the Array's children.
+     * @param {import("./DataTypes").DataType} elementType The type for the arrays elements
+     * @returns {DataTypes.Array}
+     */
+    ArrayOf: function (elementType) {
+        return new this.Array(elementType)
+    },
 
     /**
      * Decodes native datatypes, reads directly from the datastream and returns the value
