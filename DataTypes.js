@@ -233,8 +233,8 @@ export const DataTypes = {
                 const array = []
 
                 // Decoding of the arrays children
-                if(isNaN(extraType)) {
-                    if(!(extraType instanceof TypeHandle)) throw "Error: Invalid Datatype received, type is neither a native datatype nor registered!"
+                if(!this.isNativetype(extraType)) {
+                    if(!(extraType instanceof TypeHandle)) throw new Error("Error: Invalid Datatype received, type is neither a native datatype nor registered!")
 
                     // Custom datatype
                     for (let childI = 0; childI < length; childI++) {
@@ -243,7 +243,7 @@ export const DataTypes = {
                         index = i;
                     }
                 } else {
-                    if(extraType === DataTypes.Array) throw "Array of type array found. If you want to nest arrays you need to register another type that holds an array."
+                    if(extraType === DataTypes.Array) throw new Error("Array of type array found. If you want to nest arrays you need to register another type that holds an array.")
 
                     // Native datatype
                     for (let childI = 0; childI < length; childI++) {
@@ -293,57 +293,57 @@ export const DataTypes = {
                 if(typeof arg === "string") {
                     value = decoder.decode(arg[0])[0]
                 } else if(!isNaN(arg)) {
-                    if(value > 255 || value < 0) throw "Range Error, number must be in range from 0-255"
+                    if(value > 255 || value < 0) throw new Error("Range Error, number must be in range from 0-255")
                     value = arg;
-                } else throw "Unexpected argument, expected a (string) char from the charset or a number"
+                } else throw new Error("Unexpected argument, expected a (string) char from the charset or a number")
     
                 view.setUint8(value)
                 break;
             case DataTypes.Int8:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
     
                 view.setInt8(index(1), arg)
                 break;
             case DataTypes.Int16:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
     
                 view.setInt16(index(2), arg)
                 break;
             case DataTypes.Int32:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
     
                 view.setInt32(index(4), arg)
                 break;
             case DataTypes.Float32:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
     
                 view.setFloat32(index(4), arg)
                 break;
             case DataTypes.Float64:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
     
                 view.setFloat64(index(8), arg)
                 break;
             case DataTypes.UnsignedInt8:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
     
                 view.setUint8(index(1), arg)
                 break;
             case DataTypes.UnsignedInt16:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
     
                 view.setUint16(index(2), arg)
                 break;
             case DataTypes.UnsignedInt32:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
     
                 view.setUint32(index(4), arg)
                 break;
             case DataTypes.SignedVarInt:
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
                 arg = (arg << 1) ^ (arg >> 31);
             case DataTypes.VarInt: {
-                if(isNaN(arg)) throw "Unexpected argument, expected a number";
+                if(isNaN(arg)) throw new Error("Unexpected argument, expected a number");
                 
                 let uint8arr = encodeVarint(arg);
     
@@ -352,7 +352,7 @@ export const DataTypes = {
             }
             case DataTypes.Boolean:
             case DataTypes.BooleanGroup:
-                if(typeof arg !== "boolean") throw "Unexpected argument, expected a boolean";
+                if(typeof arg !== "boolean") throw new Error("Unexpected argument, expected a boolean");
     
                 // If the previous bool byte still has more bits for bools use those otherwise allocate new byte
                 if(boolAmount % 8 === 0) {
@@ -370,7 +370,7 @@ export const DataTypes = {
                 view.setUint8(latestBoolI, byte);
                 break;
             case DataTypes.StringLiteral: {
-                if(typeof arg !== "string") throw "Unexpected argument, expected a string";
+                if(typeof arg !== "string") throw new Error("Unexpected argument, expected a string");
     
                 // Decode the string to byte array
                 let encodedString = Transcoder.unicodeDecode(arg)
@@ -384,7 +384,7 @@ export const DataTypes = {
                 break;
             }
             case DataTypes.Array: {
-                if(!Array.isArray(arg)) throw "Unexpected argument, expected an array";
+                if(!Array.isArray(arg)) throw new Error("Unexpected argument, expected an array");
                 
                 // Length
                 const length = arg.length;
@@ -394,8 +394,8 @@ export const DataTypes = {
                 byteArray.set(encodedLengthNum, index(encodedLengthNum.byteLength))
     
                 // Encode the arrays children
-                if(isNaN(extraType)) { // custom datatype
-                    if(!(extraType instanceof TypeHandle)) throw "Error: Invalid Datatype received, type is neither a native datatype nor registered!"
+                if(!this.isNativetype(extraType)) { // custom datatype
+                    if(!(extraType instanceof TypeHandle)) throw new Error("Error: Invalid Datatype received, type is neither a native datatype nor registered!")
     
                     for (let childI = 0; childI < length; childI++) {
                         let passedArg = arg[childI];
@@ -405,7 +405,7 @@ export const DataTypes = {
                         byteArray.set(encodedData, index(len))
                     }
                 } else { // native datatype
-                    if(extraType === DataTypes.Array) throw "Array of type array found. If you want to nest arrays you need to register another type that holds an array."
+                    if(extraType === DataTypes.Array) throw new Error("Array of type array found. If you want to nest arrays you need to register another type that holds an array.")
                     
                     for (let childI = 0; childI < length; childI++) {
                         // native datatypes directly write to the datastream so there is no need to get the byte array and concatenate them
@@ -418,7 +418,7 @@ export const DataTypes = {
                 return {booleanIndex: latestBoolI, newBoolAmount: boolAmount, skipNextType: true}
             }
             case DataTypes.ByteArray: {
-                if(!(arg instanceof Uint8Array)) throw "Unexpected argument, expected an Uint8Array";
+                if(!(arg instanceof Uint8Array)) throw new Error("Unexpected argument, expected an Uint8Array");
     
                 // Length
                 const length = arg.byteLength;
@@ -433,6 +433,16 @@ export const DataTypes = {
                 break; // just continue, this datatype should never actually occur as a type, so this is just a fallback
         }
         return {booleanIndex: latestBoolI, newBoolAmount: boolAmount, skipNextType: false}
+    },
+
+    /**
+     * Returns true if the datatype provided is a native datatype
+     * @param {DataTypes} dataType 
+     * @returns {boolean}
+     */
+    isNativetype: function(dataType) {
+        // return Object.values(this).includes(dataType) // cleaner
+        return isNaN(dataType) || dataType === this.Array
     }
 }
 

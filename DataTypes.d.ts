@@ -117,4 +117,9 @@ namespace DataTypes {
      */
     export function encodeNative(arg: (boolean | number | string)[], dataType: DataTypes, extraType: DataTypes | TypeHandle, byteArray: Uint8Array, view: DataView, index: (length: number) => number, latestBoolI: number, boolAmount: number): { skipNextType: boolean, booleanIndex: number, newBoolAmount: number }
     export function ArrayOf(elementType: DataType): DataType
+    /**
+     * Returns true if the datatype provided is a native datatype
+     * @param dataType Datatype to check if its native 
+     */
+    export function isNativetype(dataType: DataTypes): boolean
 }

@@ -18,7 +18,7 @@ export class TypeHandle {
      */
     constructor(name, id, datatypes) {
         Object.values(datatypes).forEach((dataType,i)=>{ // Validation
-            if(isNaN(dataType) && !(dataType instanceof TypeHandle)) throw "Invalid Datatype recieved. Datatypes must either be a native from the datatypes enum or registered through the Type-/Packethandle API   Argument ["+i+"]"
+            if(!DataTypes.isNativetype(dataType) && !(dataType instanceof TypeHandle)) throw new Error("Invalid Datatype recieved. Datatypes must either be a native from the datatypes enum or registered through the Type-/Packethandle API   Argument ["+i+"]")
         })
 
         this.name = name;
@@ -49,8 +49,8 @@ export class TypeHandle {
             if(skipDataType) return skipDataType = false;
 
             const dataType = this.datatypes[key]
-            if(isNaN(dataType)) {
-                if(!(dataType instanceof TypeHandle)) throw "Error: type is neither a native datatype nor registered!"
+            if(!DataTypes.isNativetype(dataType)) {
+                if(!(dataType instanceof TypeHandle)) throw new Error("Error: type is neither a native datatype nor registered!")
 
                 let {decodedParameters, index: i} = dataType.decode(byteArray, index);
                 output[key] = decodedParameters;
@@ -123,9 +123,9 @@ export class TypeHandle {
             const dataType = types[key]
             let arg = data[key]
 
-            // Native datatypes are internally referenced as a number form, so you can check if its a native type by using isNaN
-            if(isNaN(dataType)) {
-                if(!(dataType instanceof TypeHandle)) throw "Error: type is neither a native datatype nor registered!"
+            // Encode based on the datatype it has
+            if(!DataTypes.isNativetype(dataType)) {
+                if(!(dataType instanceof TypeHandle)) throw new Error("Error: type is neither a native datatype nor registered!")
 
                 let {byteArray, index: i} = dataType.encode(arg, bI)
                 arr.set(byteArray, bI)

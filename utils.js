@@ -88,7 +88,7 @@ export function getDataStructString(name, packetInfoTypes, builtInDataTypes) {
     let boolAmount = 0;
     Object.keys(packetInfoTypes).forEach((key)=>{
         const dataType = packetInfoTypes[key]
-        const typeId = typeof dataType === "number" ? builtInDataTypes[dataType].id : dataType.id
+        const typeId = DataTypes.isNativetype(dataType) ? builtInDataTypes[dataType].id : dataType.id
         if(typeId == '' || !typeId) return console.warn("[Illegal Type] reported for "+name+" at index "+key); // Illegal type, skip it
 
         if(dataType === DataTypes.Boolean) {

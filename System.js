@@ -140,7 +140,7 @@ export class System {
      */
     static getTypeSync(id) {
         let type = registerStack[id]
-        if(!type) throw "Error, this type is not loaded yet but you're referencing it"
+        if(!type) throw new Error("Error, this type is not loaded yet but you're referencing it")
 
         return type;
     }
