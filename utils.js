@@ -98,7 +98,7 @@ export function getDataStructString(name, packetInfoTypes, builtInDataTypes) {
         else if(dataType === DataTypes.Boolean) {                                                     // 3. Boolean Datatype
             // Check if the last bool wouldve been filled by now so that a new one would be needed
             if(boolAmount % 8 === 0) {
-                typeArray.push(typeId)
+                typeArray.push(builtInDataTypes[dataType].id)
                 boolAmount -= 8
             }
         }

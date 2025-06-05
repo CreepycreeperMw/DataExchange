@@ -138,6 +138,14 @@ export const DataTypes = {
      */
     decodeNative: function (dataType, extraType, index, view, byteArray, latestBoolI, boolAmount) {
         let value;
+
+        // Support for new DataTypes.ArrayOf() Syntax (converts to regular DataTypes.Array Syntax)
+        let skipNextType = true;
+        if(dataType instanceof this.Array) {
+            extraType = dataType.elementType
+            dataType = DataTypes.Array
+            skipNextType = false
+        }
         switch(dataType) {
             case DataTypes.Char:
                 // Get 1 byte at index and decode it using Textdecoder to char value
@@ -216,8 +224,7 @@ export const DataTypes = {
                 index = i;
                 const end = index + length;
     
-    
-                
+
                 let stringByteArray = byteArray.subarray(index, end)
                 index = end
                 value = decoder.unicodeEncode(stringByteArray)
@@ -253,7 +260,7 @@ export const DataTypes = {
                     }
                 }
     
-                return {value: array, index, skipNextType: true, latestBoolI, boolAmount};
+                return {value: array, index, skipNextType: skipNextType, latestBoolI, boolAmount};
             }
             case DataTypes.ByteArray: {
                 const {decodedValue: length, index: i} = decodeVarint(view, index)
@@ -285,6 +292,10 @@ export const DataTypes = {
      * @returns {{ skipNextType: boolean, booleanIndex: number, newBoolAmount: number }} An object detailing wether the extra datatype was 'consumed', the index of the last allocated byte for a boolean and the amount of booleans currently stored in that byte
      */
     encodeNative: function(arg, dataType, extraType, byteArray, view, index, latestBoolI, boolAmount) {
+        if(dataType instanceof this.Array) {
+            extraType = dataType.elementType
+            dataType = DataTypes.Array
+        }
         switch (dataType) {
             case DataTypes.Char:
                 let value;
@@ -381,7 +392,7 @@ export const DataTypes = {
                 byteArray.set(encodedString, index(length)) // Add the string data
                 break;
             }
-            case this.Array: {
+            case DataTypes.Array: {
                 if(!Array.isArray(arg)) throw new Error("Unexpected argument, expected an array");
                 
                 // Length
@@ -415,7 +426,7 @@ export const DataTypes = {
     
                 return {booleanIndex: latestBoolI, newBoolAmount: boolAmount, skipNextType: true}
             }
-            case this.ByteArray: {
+            case DataTypes.ByteArray: {
                 if(!(arg instanceof Uint8Array)) throw new Error("Unexpected argument, expected an Uint8Array");
     
                 // Length

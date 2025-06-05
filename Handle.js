@@ -23,7 +23,7 @@ export class TypeHandle {
 
         this.name = name;
         this.id = id;
-        /** @type {(PacketHandle | TypeHandle)[]} */
+        /** @type {(PacketHandle | TypeHandle | DataTypes)[]} */
         this.datatypes = datatypes;
     }
 
