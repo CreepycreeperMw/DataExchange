@@ -121,5 +121,5 @@ namespace DataTypes {
      * Returns true if the datatype provided is a native datatype
      * @param dataType Datatype to check if its native 
      */
-    export function isNativetype(dataType: DataTypes): boolean
+    export function isNative(dataType: DataTypes): boolean
 }

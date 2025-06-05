@@ -88,19 +88,24 @@ export function getDataStructString(name, packetInfoTypes, builtInDataTypes) {
     let boolAmount = 0;
     Object.keys(packetInfoTypes).forEach((key)=>{
         const dataType = packetInfoTypes[key]
-        const typeId = DataTypes.isNativetype(dataType) ? builtInDataTypes[dataType].id : dataType.id
-        if(typeId == '' || !typeId) return console.warn("[Illegal Type] reported for "+name+" at index "+key); // Illegal type, skip it
 
-        if(dataType === DataTypes.Boolean) {
+        // This logic handles getting the binary code (represented as string) of the type (aka typeId) and adding that to the typeArray
+        if (dataType === DataTypes.Array) typeArray.push(builtInDataTypes[DataTypes.Array.number].id) // 1. Array Datatype legacy syntax 
+        else if(dataType instanceof DataTypes.Array) {                                                // 2. Array with ArrayOf(..) Syntax 
+            typeArray.push(builtInDataTypes[DataTypes.Array.number]) // typeId of array
+            typeArray.push(dataType.elementType.id)                  // typeId of the array's child els
+        }
+        else if(dataType === DataTypes.Boolean) {                                                     // 3. Boolean Datatype
             // Check if the last bool wouldve been filled by now so that a new one would be needed
             if(boolAmount % 8 === 0) {
                 typeArray.push(typeId)
                 boolAmount -= 8
             }
-        } else if (dataType instanceof DataTypes.Array) {
-            typeArray.push(DataTypes.Array)
-            typeArray.push(dataType.elementType)
-        } else typeArray.push(typeId) // Add the type
+        }
+        else if(DataTypes.isNative(dataType)) typeArray.push(builtInDataTypes[dataType].id)           // 4. Any other native datatype
+        else typeArray.push(dataType.id)                                                              // 5. Custom Datatype (TypeHandle)
     })
+
+    // All type Ids are concatenated using a ; (not part of the header charset)
     return name + ' ' + typeArray.join(';')
 }

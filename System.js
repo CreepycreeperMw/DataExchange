@@ -160,10 +160,12 @@ export class System {
                 registerStack[id] = [res]
             })
         } else if(Array.isArray(type)) {
+            // Type is not yet loaded and a temporare request tree has already been made so add the request to it
             return await new Promise(res=>{
                 registerStack[id].push(res)
             })
         } else {
+            // Type is loaded, return the type immediatly
             return Promise.resolve(type)
         }
     }

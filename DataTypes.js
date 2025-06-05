@@ -112,9 +112,7 @@ export const DataTypes = {
             return "15"
         }
 
-        get id() {
-            return 15
-        }
+        static number = 15
     },
 
     /**
@@ -233,7 +231,7 @@ export const DataTypes = {
                 const array = []
 
                 // Decoding of the arrays children
-                if(!this.isNativetype(extraType)) {
+                if(!this.isNative(extraType)) {
                     if(!(extraType instanceof TypeHandle)) throw new Error("Error: Invalid Datatype received, type is neither a native datatype nor registered!")
 
                     // Custom datatype
@@ -383,7 +381,7 @@ export const DataTypes = {
                 byteArray.set(encodedString, index(length)) // Add the string data
                 break;
             }
-            case DataTypes.Array: {
+            case this.Array: {
                 if(!Array.isArray(arg)) throw new Error("Unexpected argument, expected an array");
                 
                 // Length
@@ -394,7 +392,7 @@ export const DataTypes = {
                 byteArray.set(encodedLengthNum, index(encodedLengthNum.byteLength))
     
                 // Encode the arrays children
-                if(!this.isNativetype(extraType)) { // custom datatype
+                if(!this.isNative(extraType)) { // custom datatype
                     if(!(extraType instanceof TypeHandle)) throw new Error("Error: Invalid Datatype received, type is neither a native datatype nor registered!")
     
                     for (let childI = 0; childI < length; childI++) {
@@ -405,7 +403,7 @@ export const DataTypes = {
                         byteArray.set(encodedData, index(len))
                     }
                 } else { // native datatype
-                    if(extraType === DataTypes.Array) throw new Error("Array of type array found. If you want to nest arrays you need to register another type that holds an array.")
+                    if(extraType === this.Array) throw new Error("Array of type array found. If you want to nest arrays you need to register another type that holds an array.")
                     
                     for (let childI = 0; childI < length; childI++) {
                         // native datatypes directly write to the datastream so there is no need to get the byte array and concatenate them
@@ -417,7 +415,7 @@ export const DataTypes = {
     
                 return {booleanIndex: latestBoolI, newBoolAmount: boolAmount, skipNextType: true}
             }
-            case DataTypes.ByteArray: {
+            case this.ByteArray: {
                 if(!(arg instanceof Uint8Array)) throw new Error("Unexpected argument, expected an Uint8Array");
     
                 // Length
@@ -440,9 +438,9 @@ export const DataTypes = {
      * @param {DataTypes} dataType 
      * @returns {boolean}
      */
-    isNativetype: function(dataType) {
+    isNative: function(dataType) {
         // return Object.values(this).includes(dataType) // cleaner
-        return isNaN(dataType) || dataType === this.Array
+        return !isNaN(dataType) || dataType === this.Array
     }
 }
 

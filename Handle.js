@@ -18,7 +18,7 @@ export class TypeHandle {
      */
     constructor(name, id, datatypes) {
         Object.values(datatypes).forEach((dataType,i)=>{ // Validation
-            if(!DataTypes.isNativetype(dataType) && !(dataType instanceof TypeHandle)) throw new Error("Invalid Datatype recieved. Datatypes must either be a native from the datatypes enum or registered through the Type-/Packethandle API   Argument ["+i+"]")
+            if(!DataTypes.isNative(dataType) && !(dataType instanceof TypeHandle)) throw new Error("Invalid Datatype recieved. Datatypes must either be a native from the datatypes enum or registered through the Type-/Packethandle API   Argument ["+i+"]")
         })
 
         this.name = name;
@@ -49,7 +49,7 @@ export class TypeHandle {
             if(skipDataType) return skipDataType = false;
 
             const dataType = this.datatypes[key]
-            if(!DataTypes.isNativetype(dataType)) {
+            if(!DataTypes.isNative(dataType)) {
                 if(!(dataType instanceof TypeHandle)) throw new Error("Error: type is neither a native datatype nor registered!")
 
                 let {decodedParameters, index: i} = dataType.decode(byteArray, index);
@@ -124,7 +124,7 @@ export class TypeHandle {
             let arg = data[key]
 
             // Encode based on the datatype it has
-            if(!DataTypes.isNativetype(dataType)) {
+            if(!DataTypes.isNative(dataType)) {
                 if(!(dataType instanceof TypeHandle)) throw new Error("Error: type is neither a native datatype nor registered!")
 
                 let {byteArray, index: i} = dataType.encode(arg, bI)
