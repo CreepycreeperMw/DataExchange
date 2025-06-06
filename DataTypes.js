@@ -3,6 +3,8 @@ import { TypeHandle } from "./Handle"
 import { encodeVarint, decodeVarint } from "./utils"
 const encoder = Transcoder
 const decoder = Transcoder
+/** @type {Set<DataTypes>} */
+let nativeTypesList;
 
 /**
  * @enum {number}
@@ -141,9 +143,9 @@ export const DataTypes = {
 
         // Support for new DataTypes.ArrayOf() Syntax (converts to regular DataTypes.Array Syntax)
         let skipNextType = true;
-        if(dataType instanceof this.Array) {
+        if(typeof dataType !== "number" && dataType.prototype.number) {
             extraType = dataType.elementType
-            dataType = DataTypes.Array
+            dataType = dataType.prototype.number
             skipNextType = false
         }
         switch(dataType) {
@@ -292,9 +294,9 @@ export const DataTypes = {
      * @returns {{ skipNextType: boolean, booleanIndex: number, newBoolAmount: number }} An object detailing wether the extra datatype was 'consumed', the index of the last allocated byte for a boolean and the amount of booleans currently stored in that byte
      */
     encodeNative: function(arg, dataType, extraType, byteArray, view, index, latestBoolI, boolAmount) {
-        if(dataType instanceof this.Array) {
+        if(typeof dataType !== "number" && dataType.prototype.number) {
             extraType = dataType.elementType
-            dataType = DataTypes.Array
+            dataType = dataType.prototype.number
         }
         switch (dataType) {
             case DataTypes.Char:
@@ -450,10 +452,11 @@ export const DataTypes = {
      * @returns {boolean}
      */
     isNative: function(dataType) {
-        // return Object.values(this).includes(dataType) // cleaner
-        return !isNaN(dataType) || dataType === this.Array
+        return nativeTypesList.has(dataType) // cleaner
     }
 }
+
+nativeTypesList = new Set(Object.values(DataTypes))
 
 /*  This is deprecated and was long replaced by the respective var in System.js */
 export let builtInDataTypes = [
