@@ -49,6 +49,7 @@ export class TypeHandle {
             if(skipDataType) return skipDataType = false;
 
             const dataType = this.datatypes[key]
+
             if(!DataTypes.isNative(dataType)) {
                 if(!(dataType instanceof TypeHandle)) throw new Error("Error: type is neither a native datatype nor registered!")
 
@@ -60,13 +61,14 @@ export class TypeHandle {
                 // Some data requires 2 types, e.g. when its an array it requires the type of element of the array.
                 const nextType = this.datatypes[keys[kI+1]];
 
-                let { value, index: i, skipNextType, latestBoolI, boolAmount: bA } = DataTypes.decodeNative(dataType, nextType, index, view, byteArray, latestBoolIndex, boolAmount)
-                output[key] = value;
+                let result = DataTypes.decodeNative(dataType, nextType, index, view, byteArray, latestBoolIndex, boolAmount)
+                output[key] = result.value;
                 
-                index = i;
-                latestBoolIndex = latestBoolI;
-                boolAmount = bA;
-                skipDataType = skipNextType;
+                // Save the values from where the decoder left off to know at what byte to start reading when decoding the next data.
+                index           = result.index;
+                latestBoolIndex = result.latestBoolI;
+                boolAmount      = result.boolAmount;
+                skipDataType    = result.skipNextType;
             }
         })
         return { decodedParameters: output, index: index}
@@ -88,9 +90,9 @@ export class TypeHandle {
          *  which steps the index the next time this function is invoked.
          * Also makes sure there is always enough space allocated
          * @param {number} sizeRequired 
-         * @returns 
+         * @returns the current index
          */
-        function index(sizeRequired) { // Allocates more bytes if it runs out of them and increases the index
+        function index(sizeRequired) { // Allocates more bytes to the buffer if it runs out of them and increases the index
             // Increase the index
             let oldI = bI;
             bI += sizeRequired;

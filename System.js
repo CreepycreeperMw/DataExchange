@@ -26,13 +26,14 @@ const id = system.afterEvents.scriptEventReceive.subscribe(event=>{
 
 // Wait until no more modules are loaded and then resolve the queue
 system.runInterval(()=>{
-    if(system.currentTick - lastModuleLoaded > config.moduleLoadTimeout) {
+    let timeElapsedSinceModuleLoad = system.currentTick - lastModuleLoaded
+    if(timeElapsedSinceModuleLoad > config.moduleLoadTimeout) {
         // Modules are considered loaded
         loaded = true;
 
         system.afterEvents.scriptEventReceive.unsubscribe(id)
-        loadingPromises.forEach(callback=>{
-            callback(true)
+        loadingPromises.forEach(resolve=>{
+            resolve(true)
         })
     }
 },1)
