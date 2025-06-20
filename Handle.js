@@ -28,7 +28,7 @@ export class TypeHandle {
     }
 
     /**
-     * Decodes an input bytearray using the Handle's Decoder interface and magically returns the type complex structure defined via the Types structure.
+     * Decodes an input bytearray using the Handle's Decoder interface and magically returns the type-complex structure defined via the Types structure.
      * Try it!
      * @param {Uint8Array} byteArray The data payload
      * @param {number} [index=0] Rules which byte is to read next
@@ -160,6 +160,11 @@ export class TypeHandle {
 
 /** Stores all the outgoing packet requests until its confirmed they have been send */
 export const sendPackets = {};
+/**
+ * The Packet Handle holds methods to send this packet type
+ * add event listeners and acts as an easy way to identify and
+ * reference this Packettype across code.
+ */
 export class PacketHandle extends TypeHandle {
     /**
      * The Packet Handle holds methods to send this packet type
