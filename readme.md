@@ -63,4 +63,4 @@ This family consists of the following people:`)
 ## Protocol
 Quick Links
 - How to [implement the protocol](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#Protocol)
-- [Protocol Specification](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications)
+- [Protocol Specification](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications.md)

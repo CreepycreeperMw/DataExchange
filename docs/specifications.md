@@ -48,5 +48,6 @@ The resulting bytes from encoding/decoding these types are then converted to str
  - made up of the first 256 Safe to use (1 byte and 2 byte) unicode characters
  - excluding characters that arent supported in the id or message respectively
 
- Note: The above text passage with the chars is not a code snippet, and if you want to paste it to your code you first need to escape the characters properly.
- If you're looking to simply copy this charset into your own implementation take a look at [Transcoder/charset](https://github.com/CreepycreeperMw/DataExchange/blob/main/Transcoder.js#L2)
+ > [!IMPORTANT]
+ > The above text passage with the chars is not a code snippet, and if you want to paste it to your code you first need to escape the characters properly.
+ > If you're looking to simply copy this charset into your own implementation take a look at [Transcoder/charset](https://github.com/CreepycreeperMw/DataExchange/blob/main/Transcoder.js#L2)

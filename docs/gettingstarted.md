@@ -149,7 +149,7 @@ Listening is essentially the same but in reverse so I wont demonstrate it here a
 <br>
 
 ## Protocol
-In this tutorial we will stick to the [specification](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications) and step by step
+In this tutorial we will stick to the [specification](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications.md) and step by step
 fullfill everything that is needed to make this protocol work. Of course this will be more of a minimalistic implementation and doesnt feature any extra optimizations or API features.
 
 > In order to follow along I recommend you should have a basic understandment of data structures. Incase you need a refresh there is also an explanation [here](#the-datatypes-enum)

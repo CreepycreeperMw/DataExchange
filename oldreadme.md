@@ -7,7 +7,7 @@ Now before I get into the details I want to differentiate between the *Protocol*
 The goal was to move as much load as possible onto the API instead of the protocol so that the protocol can stay rather simple,
 while you can enjoy a feature rich, easy to use and fast system but also allowing you to *easily get started without the library* [writing your own approach](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#Protocol).
 
-###### (All of the requirements of the protocol are listed [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications))
+###### (All of the requirements of the protocol are listed [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications.md))
 
 **If you're looking to [get started with the API](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#api) or you want to [implement the protocol](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#protocol) yourself, look [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md)**
 
