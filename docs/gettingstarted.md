@@ -257,6 +257,7 @@ Now back in index.js you can now convert the packetId to bytes and then to strin
     ...
 ```
 Though, because this includes the registration listener, we should actually put this code above our loading sequence so that when loading finishes we dont miss early requests coming through while we're still subscribing to scriptevent
+> [!TIP]
 > Incase you dont want to go through the middlestep of converting the id to bytes, I also wrote a small function that converts numbers like that straight to strings [here](https://github.com/CreepycreeperMw/DataExchange/blob/main/Transcoder.js#L39), but if you use this, make sure to add padding to the result string with `.paddingStart(8, packetIdCharset[0])` in order to fill in the bytes that are 0
 
 ---
@@ -285,3 +286,6 @@ let natives = ['ch','int8','int16','int32','svarint','uint8','uint16','uint32','
 for (const type in natives) register(type, []); // you provide no types because its a base type
 ```
 We just create an array of native types and loop over it, because they're native they dont actually have an type array, so we can just pass an empty array for the types.
+
+> [!WARNING]
+> This part of the guide is still work in process
