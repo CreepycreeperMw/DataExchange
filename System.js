@@ -46,6 +46,13 @@ system.run(()=>utils.sendMsg("registry:loaded", "")) // Report that system has l
  * @type {Map<string, ((id: string)=>void)[]>}
  */
 let registerQueue = new Map()
+/**
+ * Caches all packet registration requests in case a packet
+ * is registered at a later time than most other addons did
+ * Key: datastring     Value: packetId encoded as string
+ * @type {Map<string, string>}
+ */
+let registerCache = new Map()
 /** @type {{[packetId: string]: TypeHandle|PacketHandle}} */
 let registerStack = {}
 let packetId = 0;
@@ -66,6 +73,7 @@ system.afterEvents.scriptEventReceive.subscribe(event=>{
             
             // Give each type its respective id based on the order Minecraft gave the packets out
             registerQueue.get(event.message).forEach(callback=>callback(res))
+            if(!registerCache.has(event.message)) registerCache.set(event.message, res)
             packetId++;
         }
     }
@@ -91,6 +99,8 @@ export class System {
 
         // Return a new promise that resolves once the packet type has got registered globally
         let typeId = await new Promise((res, rej)=>{
+            if(registerCache.has(data)) return res(registerCache.get(data)) // if already registered return the id
+
             if(!registerQueue.has(data) || !registerQueue.get(data)) registerQueue.set(data, [res])
             else registerQueue.get(data).push(res)
 
@@ -121,6 +131,8 @@ export class System {
 
         // Return a new promise that resolves once the packet type has got registered globally
         let typeId = await new Promise((res, rej)=>{
+            if(registerCache.has(data)) return res(registerCache.get(data)) // if already registered return the id
+
             if(!registerQueue.has(data) || !registerQueue.get(data)) registerQueue.set(data, [res])
             else registerQueue.get(data).push(res)
 
