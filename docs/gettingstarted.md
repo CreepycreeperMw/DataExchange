@@ -6,7 +6,7 @@ If you want to implement the protocol yourself you may start [here](#protocol)
 
 ## API
 ### 1. Installing the API
-First you need to [download the Library]() in order to embed it into your code. After you did that, just drop the main folder into your scripts folder and you're good to go.
+First you need to [download the Library](https://github.com/CreepycreeperMw/DataExchange/releases/latest) in order to embed it into your code. After you did that, just drop the main folder into your scripts folder and you're good to go.
 
 Then you need to import the Library from the local path, in my case my script is sitting inside the `scripts` folder and the System is sitting in `scripts/DataExchange` folder in which you'll find the `System.js` and `DataTypes.js` modules.
 ```js
@@ -149,7 +149,7 @@ Listening is essentially the same but in reverse so I wont demonstrate it here a
 <br>
 
 ## Protocol
-In this tutorial we will stick to the [specification]() and step by step
+In this tutorial we will stick to the [specification](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/specifications) and step by step
 fullfill everything that is needed to make this protocol work. Of course this will be more of a minimalistic implementation and doesnt feature any extra optimizations or API features.
 
 > In order to follow along I recommend you should have a basic understandment of data structures. Incase you need a refresh there is also an explanation [here](#the-datatypes-enum)
