@@ -1,6 +1,6 @@
 import { config } from "./config";
 import { DataTypes } from "./DataTypes";
-import { world, system } from "@minecraft/server"
+import { system } from "@minecraft/server"
 import { PacketHandle, TypeHandle, listeners, sendPackets } from "./Handle";
 import { Transcoder, packetIdCharset } from "./Transcoder"
 import * as utils from "./utils"
@@ -222,6 +222,8 @@ export class System {
 }
 
 await System.getNativeTypes(); // Registers the native types and keeps any external module from using native types before they are registered
+
+// --- Listeners Handling ---
 
 /** @type {{[requestId: string]: string[]}} */
 let multiRequestPackets = {}
