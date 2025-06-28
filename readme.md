@@ -7,6 +7,20 @@ The API is built to be
 - ⚙️ **efficient**
 - 🧠 **straight forward**
 - 🔁 **backwards compatible**
+- 🪽 **lightweight**
+
+## Features & Key aspects
+- Really fast encoding & decoding
+- Only 3 Methods required to start sending packets (register/listen/send)
+- Lightweight API (no bloatware & unnecessary features)
+- Low level control so that you can build your own protocols on top of this
+- Automatic Synchronisation with other Addons (no key or handshake protocol required)
+- Wastes little to no bytes in transmittion
+- Has a minimalistic approach to the specification \(= rules to follow in the implementation to make this protocol work with other implementations\)
+- Has a dynamic API for native datatypes so that future versions can add, change and refactor datatypes without them breaking if addons use different API Versions
+- Actively maintained and open for suggestions
+- Does not waste to send any sort of structure in the payload (unlike json does e.g.)
+- Future proof and reliable (All of the protocol and API is built in a way that it does not break and minimalized the programmers effort to keep protocol or api up to date)
 
 > [!NOTE]
 > Click here to [get started](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#getting-started)

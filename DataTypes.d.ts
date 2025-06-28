@@ -82,7 +82,8 @@ export enum DataTypes {
     /** 
      * Array of any other type. Prepend this type by the type you want the array to have.
      */
-    Array = 15
+    Array = 15,
+    Optional = 16
 }
 
 type DataType = DataTypes | TypeHandle | PacketHandle;

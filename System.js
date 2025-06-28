@@ -8,7 +8,7 @@ import * as utils from "./utils"
 const encoder = Transcoder // Named differently to en/decoder to avoid conflicts with native (or not) TextEncoder / TextDecoder interfaces
 const decoder = Transcoder // but so that you could technically switch to them or another transcoder down the road
 
-/* - Loading Cycle -
+/* --- Loading ---
  Ensure that all addons are loaded and all listeners have been attached before sending any data */
 
 /**
@@ -41,28 +41,44 @@ system.runInterval(()=>{
 system.run(()=>utils.sendMsg("registry:loaded", "")) // Report that system has loaded
 // (Loading End)
 
+// --- Main System Components ---
 /**
  * Stack that houses all the packet registration requests
+ * [ IN PROGRESS ]
  * @type {Map<string, ((id: string)=>void)[]>}
  */
 let registerQueue = new Map()
+
 /**
  * Caches all packet registration requests in case a packet
  * is registered at a later time than most other addons did
  * Key: datastring     Value: packetId encoded as string
+ * [ CACHE ]
  * @type {Map<string, string>}
  */
 let registerCache = new Map()
-/** @type {{[packetId: string]: TypeHandle|PacketHandle}} */
+
+/**
+ * Registration Stack
+ * This houses all the PacketIds/Handles of the Types that have
+ * successfully been registered
+ * [ DONE ]
+ * @type {{[packetId: string]: TypeHandle|PacketHandle}}
+ */
 let registerStack = {}
+
+/**
+ * The id of the next packet to be registered
+ */
 let packetId = 0;
-const maxPacketId = 4294967296
+
+const MAX_PACKET_ID = 4294967296
 
 // Registry
 system.afterEvents.scriptEventReceive.subscribe(event=>{
     if(event.id=="registry:register") {
         if(registerQueue.has(event.message)) {
-            if(packetId === maxPacketId) throw "I dont know how you did this, but you reached the maximum packet count of "+maxPacketId
+            if(packetId === MAX_PACKET_ID) throw new Error("Max packet count exceeded. "+MAX_PACKET_ID)
 
             let res = "";
             let arr = new Uint8Array(4)
@@ -79,47 +95,43 @@ system.afterEvents.scriptEventReceive.subscribe(event=>{
     }
 }, {namespaces:["registry"]})
 export let builtInDataTypes;
+
+const REGISTRATION_TIMEOUT_TICKS = 1000
+
 export class System {
     /**
-     * Registers a Type to the system and returns an TypeHandle that can be
-     * referenced and used in other types or packets
+     * Registers a Type to the system and returns a
+     * TypeHandle that can be referenced and used in
+     * other types or packets
      * @param {string} name
      * @param {DataTypes[]|{[name: string]: DataTypes}} packetInfoTypes
      * @returns {Promise<TypeHandle>}
      */
-    static async registerType(name, packetInfoTypes) {
-        // Only register the types when all Script API scripts are wake
-        await this.untilLoaded();
-
-        // Data body containing all the necessary information for the packet type
-        const data = utils.getDataStructString(name, packetInfoTypes, builtInDataTypes)
-
-        // Send the register request
-        utils.sendMsg("registry:register", data)
-
-        // Return a new promise that resolves once the packet type has got registered globally
-        let typeId = await new Promise((res, rej)=>{
-            if(registerCache.has(data)) return res(registerCache.get(data)) // if already registered return the id
-
-            if(!registerQueue.has(data) || !registerQueue.get(data)) registerQueue.set(data, [res])
-            else registerQueue.get(data).push(res)
-
-            system.runTimeout(()=>{
-                rej("Fatal error") // When the type seems to not be registered, throw an error after a certain amount of time
-            }, 1000)
-        })
-
-        const handle = new TypeHandle(name, typeId, packetInfoTypes)
-        registerStack[typeId] = handle
-        return handle;
+    static registerType(name, packetInfoTypes) {
+        return this.#registerBase(name, packetInfoTypes, TypeHandle)
     }
+
     /**
-     * Registers a Type to the system and returns an PacketConstruct that holds methods that can be used to send the packet and manage it
+     * Registers a Type to the system and returns a
+     * PacketHandle that holds methods used to send and
+     * manage the packet
      * @param {string} name
      * @param {DataTypes[]|{[name: string]: DataTypes}} packetInfoTypes
      * @returns {Promise<PacketHandle>}
      */
-    static async registerPacket(name, packetInfoTypes) {
+    static registerPacket(name, packetInfoTypes) {
+        return this.#registerBase(name, packetInfoTypes, PacketHandle)
+    }
+
+    /**
+     * Shared internal logic to register a type or packet
+     * @param {string} name
+     * @param {DataTypes[]|{[name: string]: DataTypes}} packetInfoTypes
+     * @param {typeof TypeHandle | typeof PacketHandle} handleClass
+     * @returns {Promise<TypeHandle | PacketHandle>}
+     * @returns 
+     */
+    static async #registerBase(name, packetInfoTypes, handleClass) {
         // Only register the packet when all Script API scripts are wake
         await this.untilLoaded();
 
@@ -130,58 +142,39 @@ export class System {
         utils.sendMsg("registry:register", data)
 
         // Return a new promise that resolves once the packet type has got registered globally
-        let typeId = await new Promise((res, rej)=>{
+        const typeId = await new Promise((res, rej)=>{
             if(registerCache.has(data)) return res(registerCache.get(data)) // if already registered return the id
 
-            if(!registerQueue.has(data) || !registerQueue.get(data)) registerQueue.set(data, [res])
-            else registerQueue.get(data).push(res)
+            if(!registerQueue.has(data)) {
+                registerQueue.set(data, [])
+            }
+            registerQueue.get(data).push(res)
 
+            // When the type seems to not be registered, throw an error
             system.runTimeout(()=>{
-                rej("Fatal error") // When the type seems to not be registered,
-            }, 1000)               // throw an error after a certain amount of time
+                rej(new Error(`Packet registration for "${name}" timed out (after ${REGISTRATION_TIMEOUT_TICKS})`))
+            }, REGISTRATION_TIMEOUT_TICKS)
         })
 
-        const handle = new PacketHandle(name, typeId, packetInfoTypes)
+        // Create the Handle and return it
+        const handle = new handleClass(name, typeId, packetInfoTypes)
         registerStack[typeId] = handle
         return handle;
     }
+
 
     /**
      * Gets any Type and returns it if its defined
      * @param {string} id Id of the type you want to get
      * @throws if the type is not registered
      */
-    static getTypeSync(id) {
+    static getType(id) {
         let type = registerStack[id]
         if(!type) throw new Error("Error, this type is not loaded yet but you're referencing it")
 
         return type;
     }
-    /**
-     * Gets any Type and reliably returns its Handle.
-     * [Warning] If the definition of the Type is beyond this getType statement
-     * and you await this, it will wait indefinetly because it waits until
-     * the type is defined
-     * @param {string} id The id of the Type
-     * @returns {Promise<TypeHandle | PacketHandle>}
-     */
-    static async getType(id) {
-        let type = registerStack[id]
-        if(!type) {
-            // Type is not loaded make a temporare request tree
-            return await new Promise(res=>{
-                registerStack[id] = [res]
-            })
-        } else if(Array.isArray(type)) {
-            // Type is not yet loaded and a temporare request tree has already been made so add the request to it
-            return await new Promise(res=>{
-                registerStack[id].push(res)
-            })
-        } else {
-            // Type is loaded, return the type immediatly
-            return Promise.resolve(type)
-        }
-    }
+
 
     /**
      * Haults the process until the protcol listeners are globally loaded across all Packs
@@ -247,9 +240,16 @@ system.afterEvents.scriptEventReceive.subscribe(async (event)=>{
         
         // Add the payload to the stack
         const stack = multiRequestPackets[requestId];
-        if(stack) stack[orderNumber] = event.message.substring(1, event.message.length-1)
-        else { multiRequestPackets[requestId] = [ orderNumber ]; return }
 
+        if(!stack) {
+            // If there are no other fragments then init the stack and insert the first fragment
+            multiRequestPackets[requestId] = []
+            multiRequestPackets[requestId][orderNumber] = event.message.substring(1, event.message.length-1)
+            return;
+        }
+        // Add the fragment
+        stack[orderNumber] = event.message.substring(1, event.message.length-1)
+        
         // Get the stack of all the payload pieces
         const len = stack.length
 
@@ -260,6 +260,9 @@ system.afterEvents.scriptEventReceive.subscribe(async (event)=>{
         for (let i = len - 1; i > 0; i--) {
             payload += stack[i];
         }
+
+        // Delete the fragmentation collection
+        delete multiRequestPackets[requestId]
     } else {
         payload = event.message.substring(1, event.message.length-1) // Get everything between the ""
     }
