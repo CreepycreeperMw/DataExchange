@@ -9,6 +9,9 @@ The API is built to be
 - 🔁 **backwards compatible**
 - 🪽 **lightweight**
 
+> [!NOTE]
+> Click here to [get started](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#getting-started)
+
 ## Features & Key aspects
 - Really fast encoding & decoding
 - Only 3 Methods required to start sending packets (register/listen/send)
@@ -21,9 +24,6 @@ The API is built to be
 - Actively maintained and open for suggestions
 - Does not waste to send any sort of structure in the payload (unlike json does e.g.)
 - Future proof and reliable (All of the protocol and API is built in a way that it does not break and minimalized the programmers effort to keep protocol or api up to date)
-
-> [!NOTE]
-> Click here to [get started](https://github.com/CreepycreeperMw/DataExchange/blob/main/docs/gettingstarted.md#getting-started)
 
 ## Usage
 ### 1. Registering

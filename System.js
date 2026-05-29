@@ -227,7 +227,7 @@ await System.getNativeTypes(); // Registers the native types and keeps any exter
 
 /** @type {{[requestId: string]: string[]}} */
 let multiRequestPackets = {}
-system.afterEvents.scriptEventReceive.subscribe(async (event)=>{
+system.afterEvents.scriptEventReceive.subscribe((event)=>{
     const packetHeader = event.id.replace("packet:","")
     const [packetId, requestId, orderId] = packetHeader.split("-")
     
@@ -269,7 +269,7 @@ system.afterEvents.scriptEventReceive.subscribe(async (event)=>{
         payload = event.message.substring(1, event.message.length-1) // Get everything between the ""
     }
 
-    let packetHandle = await System.getType(packetId);
+    let packetHandle = System.getType(packetId);
 
     // Decode the data from the string to all their respective data types
     let uint8arr = decoder.decode(payload);
